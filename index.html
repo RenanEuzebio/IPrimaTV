@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Xtream HLS Channel Player</title>
 
-  <!-- hls.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
@@ -17,63 +16,31 @@
       --text-muted: #bbb;
     }
     html,body{
-      height:100%;
-      margin:0;
+      height:100%;margin:0;
       font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-      background: var(--bg-dark);
-      color: var(--text);
-      overflow:hidden;
-      display:flex;
+      background:var(--bg-dark);color:var(--text);
+      overflow:hidden;display:flex;
     }
     /* Sidebar */
-    #sidebar{
-      width:260px;
-      background:var(--bg-light);
-      overflow-y:auto;
-      -webkit-overflow-scrolling:touch;
-      border-right:2px solid #000;
+    #sidebar{width:300px;background:var(--bg-light);display:flex;flex-direction:column;border-right:2px solid #000;}
+    #search{
+      margin:0.5rem;border:none;border-radius:4px;padding:0.5rem 0.7rem;
+      background:#272727;color:var(--text);font-size:0.9rem;
     }
-    #channels{
-      list-style:none;
-      margin:0;
-      padding:0;
-    }
-    .ch-item{
-      padding:0.65rem 0.9rem;
-      cursor:pointer;
-      user-select:none;
-      border-bottom:1px solid #222;
-      transition:background .2s;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
+    #channels{flex:1 1 auto;list-style:none;margin:0;padding:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+    .ch-item{padding:0.65rem 0.9rem;cursor:pointer;user-select:none;border-bottom:1px solid #222;transition:background .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .ch-item:hover{background:#2d2d2d;}
-    .ch-item.active{background:var(--accent);}
-
-    /* Video area */
-    #player-wrapper{
-      flex:1 1 auto;
-      display:flex;
-      flex-direction:column;
-    }
-    video{
-      width:100%;
-      height:100%;
-      background:#000;
-    }
-    #error{
-      padding:0.5rem;
-      font-size:0.9rem;
-      color:#f66;
-      display:none;
-      background:#222;
-    }
+    .ch-item.active{background:var(--accent);}   
+    /* Player */
+    #player-wrapper{flex:1 1 auto;display:flex;flex-direction:column;}
+    video{width:100%;height:100%;background:#000;}
+    #error{padding:0.5rem;font-size:0.9rem;color:#f66;display:none;background:#222;}
   </style>
 </head>
 <body>
-  <!-- Sidebar with channels -->
+  <!-- Sidebar -->
   <aside id="sidebar">
+    <input id="search" type="text" placeholder="Search channels…" />
     <ul id="channels"><li style="padding:1rem;color:var(--text-muted)">Loading…</li></ul>
   </aside>
 
@@ -83,77 +50,106 @@
     <video id="video" controls autoplay muted></video>
   </div>
 
-  <script>
-  (async function(){
-    const listEl = document.getElementById('channels');
-    const video  = document.getElementById('video');
-    const errBox = document.getElementById('error');
-    let hls;
+<script>
+(async function(){
+  const listEl = document.getElementById('channels');
+  const video  = document.getElementById('video');
+  const errBox = document.getElementById('error');
+  const search = document.getElementById('search');
 
-    function showError(msg){
-      errBox.textContent=msg;
-      errBox.style.display='block';
-      console.error(msg);
-    }
-    function clearError(){errBox.style.display='none';}
+  let hls, channels=[];
+  let currentItem=null;
 
-    // Fetch channels.json (structure: [{id,name,url}, …])
-    let channels=[];
-    try{
-      const resp = await fetch('./channels.json');
-      if(!resp.ok) throw new Error(resp.status+" "+resp.statusText);
-      channels = await resp.json();
-    }catch(e){
-      listEl.innerHTML='<li style="padding:1rem;color:#f66">Failed to load channels.json</li>';
-      showError('Could not fetch channels.json — '+e.message);
-      return;
-    }
-    if(!Array.isArray(channels)||!channels.length){
-      listEl.innerHTML='<li style="padding:1rem;color:#f66">channels.json is empty</li>';
-      return;
-    }
+  const PANEL_HOST = 'http://lunar.pm:8080'; // base to rebuild fresh redirect
 
-    // Build sidebar list
+  function showError(msg){errBox.textContent=msg;errBox.style.display='block';console.error(msg);}
+  function clearError(){errBox.style.display='none';}
+  function destroyHls(){if(hls){hls.destroy();hls=null;}}
+
+  // Fetch channel list
+  try{
+    const resp = await fetch('./channels.json');
+    if(!resp.ok) throw new Error(resp.status+" "+resp.statusText);
+    channels = await resp.json();
+  }catch(e){
+    listEl.innerHTML='<li style="padding:1rem;color:#f66">Failed to load channels.json</li>';
+    showError('Could not fetch channels.json — '+e.message);
+    return;
+  }
+  if(!Array.isArray(channels)||!channels.length){
+    listEl.innerHTML='<li style="padding:1rem;color:#f66">channels.json is empty</li>';
+    return;
+  }
+
+  // Render list
+  function render(filter=''){
     listEl.innerHTML='';
+    const lower=filter.toLowerCase();
     channels.forEach((ch,idx)=>{
+      if(lower && !ch.name.toLowerCase().includes(lower)) return;
       const li=document.createElement('li');
       li.className='ch-item';
       li.textContent=ch.name||('Channel '+ch.id);
-      li.dataset.url=ch.url;
       li.dataset.idx=idx;
       li.addEventListener('click',()=>select(li));
       listEl.appendChild(li);
     });
+    if(!listEl.firstChild){listEl.innerHTML='<li style="padding:0.8rem;color:var(--text-muted)">No matches</li>';}  }
 
-    function destroyHls(){if(hls){hls.destroy();hls=null;}}
+  search.addEventListener('input',()=>render(search.value));
 
-    function play(url){
-      destroyHls();
-      clearError();
-      if(url.endsWith('.m3u8')&&Hls.isSupported()){
-        hls=new Hls({maxBufferSize:30*1000*1000});
-        hls.loadSource(url);
+  // determine fresh url (strip token) so server issues new redirect with valid token
+  function freshUrl(ch){
+     try{
+       const u=new URL(ch.url);
+       return PANEL_HOST+`/live/${USERNAME}/${PASSWORD}/${ch.id}.m3u8`; // we don't have USERNAME/PASSWORD here
+     }catch(e){
+       return ch.url.split('?')[0];
+     }
+  }
+
+  function play(ch){
+    destroyHls();clearError();
+    let url = ch.url;
+    // Always prefer token‑less original path for new redirect
+    const stripped = url.split('?')[0];
+    if(stripped!==url) url=stripped;
+
+    function load(u){
+      if(u.endsWith('.m3u8') && Hls.isSupported()){
+        hls=new Hls({maxBufferSize:60*1e6, xhrSetup:(xhr)=>{xhr.withCredentials=false;}});
+        hls.loadSource(u);
         hls.attachMedia(video);
         hls.on(Hls.Events.ERROR,(evt,data)=>{
+          if(data.fatal && data.type==='networkError'){
+            // attempt retry with original url
+            if(u!==ch.url){load(ch.url);return;}  // second chance with token
+          }
           showError('HLS error: '+data.type);
         });
       }else if(video.canPlayType('application/vnd.apple.mpegurl')){
-        video.src=url;
+        video.src=u;
       }else{
-        video.src=url;
+        video.src=u;
       }
-      video.play().catch(()=>{/* autoplay blocked */});
+      video.play().catch(()=>{});
     }
 
-    function select(item){
-      document.querySelectorAll('.ch-item').forEach(el=>el.classList.toggle('active',el===item));
-      const url=item.dataset.url;
-      play(url);
-    }
+    load(url);
+  }
 
-    // Auto‑select first channel
-    select(listEl.firstChild);
-  })();
-  </script>
+  function select(li){
+    if(currentItem) currentItem.classList.remove('active');
+    currentItem=li; currentItem.classList.add('active');
+    const ch = channels[Number(li.dataset.idx)];
+    play(ch);
+  }
+
+  render();
+  // auto‑select first visible
+  const first = listEl.querySelector('.ch-item');
+  if(first) select(first);
+})();
+</script>
 </body>
 </html>
