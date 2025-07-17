@@ -8,32 +8,24 @@
   <!-- hls.js -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-  <!-- Tell Chrome it is okay to load insecure media when page is served over HTTPS.
-       Note: only works in some browsers; if the stream host does not speak HTTPS,
-       the safest fix is to serve THIS page over plain http://localhost instead. -->
-  <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"> 
-
+  <!-- Mixed‑content safety: we will proxy HTTP → HTTPS if the page is served over HTTPS -->
   <style>
-    :root {
-      --bg-dark:#111; --bg-light:#1e1e1e; --accent:#007aff; --text:#fff; --muted:#bbb;
-    }
+    :root{--bg-dark:#111;--bg-light:#1e1e1e;--accent:#007aff;--text:#fff;--muted:#bbb;}
     html,body{height:100%;margin:0;display:flex;background:var(--bg-dark);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;}
-    /* sidebar */
     #sidebar{width:300px;background:var(--bg-light);display:flex;flex-direction:column;border-right:2px solid #000;}
     #search{margin:0.5rem;padding:0.5rem 0.7rem;border:none;border-radius:4px;background:#272727;color:var(--text);font-size:0.9rem;}
     #channels{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;list-style:none;margin:0;padding:0;}
     .item{padding:0.65rem 0.9rem;border-bottom:1px solid #222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:background .2s;}
     .item:hover{background:#2d2d2d;}
     .item.active{background:var(--accent);}  
-    /* player */
     #wrap{flex:1;display:flex;flex-direction:column;}
     video{width:100%;height:100%;background:#000;}
-    #msg{display:none;padding:0.5rem;font-size:0.9rem;background:#222;color:#f66;}
+    #msg{display:none;padding:0.5rem;font-size:0.9rem;background:#222;color:#f66;max-height:3.5rem;overflow-y:auto;}
   </style>
 </head>
 <body>
   <aside id="sidebar">
-    <input id="search" type="text" placeholder="Search channels…">
+    <input id="search" type="text" placeholder="Search channels…" />
     <ul id="channels"><li style="padding:1rem;color:var(--muted)">Loading…</li></ul>
   </aside>
 
@@ -44,67 +36,99 @@
 
 <script>
 (async()=>{
- const $=q=>document.querySelector(q);
- const list=$('#channels'), search=$('#search'), vid=$('#video'), msg=$('#msg');
- let channels=[], hls=null, current=null;
+  const $=q=>document.querySelector(q);
+  const list=$('#channels'), search=$('#search'), vid=$('#video'), msg=$('#msg');
+  let channels=[], hls=null, current=null;
 
- // helper
- const err=text=>{msg.textContent=text;msg.style.display='block';console.error(text);};
- const clearErr=()=>msg.style.display='none';
- const destroy=()=>{if(hls){hls.destroy();hls=null;}};
+  /* ------------- Helpers ----------------*/
+  const show=(t)=>{msg.textContent=t;msg.style.display='block';console.error(t);};
+  const hide=()=>{msg.style.display='none';};
+  const destroy=()=>{if(hls){hls.destroy();hls=null;}};
 
- // get channels
- try{const r=await fetch('./channels.json');if(!r.ok)throw r.statusText;channels=await r.json();}
- catch(e){list.innerHTML='<li style="padding:1rem;color:#f66">Failed to load channels.json</li>';err(e);return;}
- if(!channels.length){list.innerHTML='<li style="padding:1rem;color:#f66">channels.json empty</li>';return;}
+  // When served over HTTPS, any HTTP media will be blocked => use simple CORS proxy
+  const PROXY_PREFIX = 'https://corsproxy.io/?';      // supports Range, no CORS issues
+  const proxify = url => location.protocol==='https:' && url.startsWith('http:')
+      ? PROXY_PREFIX + encodeURIComponent(url)
+      : url;
 
- // render
- const render=(f='')=>{
-   list.innerHTML='';
-   const low=f.toLowerCase();
-   channels.forEach((c,i)=>{
-     if(low&&!c.name.toLowerCase().includes(low))return;
-     const li=document.createElement('li');li.className='item';li.textContent=c.name;li.dataset.i=i;li.onclick=()=>select(li);list.appendChild(li);
-   });
-   if(!list.firstChild)list.innerHTML='<li style="padding:0.8rem;color:var(--muted)">No matches</li>';
- };
- search.oninput=()=>render(search.value);
+  /* ------------- Load channels.json -------------*/
+  try{
+    const r=await fetch('./channels.json');
+    if(!r.ok) throw new Error(r.status+' '+r.statusText);
+    channels = await r.json();
+  }catch(e){
+    list.innerHTML='<li style="padding:1rem;color:#f66">Failed to load channels.json</li>';
+    show(e.message);
+    return;
+  }
+  if(!Array.isArray(channels)||!channels.length){
+    list.innerHTML='<li style="padding:1rem;color:#f66">channels.json empty</li>';
+    return;
+  }
 
- // protocol fixer: if page https and stream http, attempt https first
- const fixProto=u=>location.protocol==='https:'&&u.startsWith('http:')?u.replace('http:','https:'):u;
+  /* ------------- Render + search -------------*/
+  const render = (filter='') => {
+    list.innerHTML='';
+    const lo=filter.toLowerCase();
+    channels.forEach((c,i)=>{
+      if(lo && !c.name.toLowerCase().includes(lo)) return;
+      const li=document.createElement('li');
+      li.className='item';
+      li.textContent=c.name;
+      li.dataset.i=i;
+      li.onclick=()=>select(li);
+      list.appendChild(li);
+    });
+    if(!list.firstChild) list.innerHTML='<li style="padding:0.8rem;color:var(--muted)">No matches</li>';
+  };
+  search.oninput=()=>render(search.value);
 
- function play(ch){
-   destroy();clearErr();
-   let url=fixProto(ch.url.split('?')[0]); // strip token, upgrade proto if needed
-   const original=fixProto(ch.url);
+  /* ------------- Custom Hls loader that applies proxy to every request -------------*/
+  class ProxyLoader extends Hls.DefaultConfig.loader {
+    constructor(cfg){super(cfg);} // keep default behaviour
+    load(context, config, callbacks){
+      context.url = proxify(context.url);
+      super.load(context, config, callbacks);
+    }
+  }
 
-   const load=u=>{
-     if(u.endsWith('.m3u8')&&Hls.isSupported()){
-       hls=new Hls({xhrSetup:x=>x.withCredentials=false});
-       hls.loadSource(u);
-       hls.attachMedia(vid);
-       hls.on(Hls.Events.ERROR,(e,d)=>{
-         if(d.fatal&&d.type==='networkError'){
-           if(u!==original){load(original);return;}
-           err('Network error / blocked stream');
-         }
-       });
-     }else if(vid.canPlayType('application/vnd.apple.mpegurl')){
-       vid.src=u;
-     }else{vid.src=u;}
-     vid.play().catch(()=>{});
-   };
-   load(url);
- }
+  /* ------------- Playback -------------*/
+  function play(ch){
+    destroy(); hide();
 
- function select(li){
-   if(current)current.classList.remove('active');
-   current=li;current.classList.add('active');
-   play(channels[li.dataset.i]);
- }
+    // prefer fresh redirect (tokenless) url but proxified if needed
+    const base = ch.url.split('?')[0];
+    const first = proxify(base);
+    const fallback = proxify(ch.url);
 
- render();
- const first=list.querySelector('.item');if(first)select(first);
+    const start = url => {
+      if(url.endsWith('.m3u8') && Hls.isSupported()){
+        hls=new Hls({loader:ProxyLoader,xhrSetup:x=>x.withCredentials=false});
+        hls.loadSource(url);
+        hls.attachMedia(vid);
+        hls.on(Hls.Events.ERROR,(ev,d)=>{
+          if(d.fatal && d.type==='networkError'){
+            if(url!==fallback){start(fallback);return;} // second try with token
+            show('Network / CORS error: stream blocked');
+          }
+        });
+      }else if(vid.canPlayType('application/vnd.apple.mpegurl')){
+        vid.src=url;
+      }else{vid.src=url;}
+      vid.play().catch(()=>{});
+    };
+
+    start(first);
+  }
+
+  function select(li){
+    if(current) current.classList.remove('active');
+    current=li; current.classList.add('active');
+    play(channels[li.dataset.i]);
+  }
+
+  render();
+  const first=list.querySelector('.item'); if(first) select(first);
 })();
 </script>
 </body>
