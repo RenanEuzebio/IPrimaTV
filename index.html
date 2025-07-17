@@ -3,26 +3,118 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Embedded Stream – Premiere</title>
+  <title>EmbedFlix Multi‑Channel Player</title>
+
   <style>
-    html, body {
+    /* ------------------------------------------------------------ */
+    /* Layout                                                      */
+    /* ------------------------------------------------------------ */
+    html,
+    body {
       height: 100%;
       margin: 0;
+      display: flex;
+      flex-direction: column;
+      background: #000;
+      color: #fff;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+        Arial, sans-serif;
     }
-    iframe {
+
+    /* ------------------------------------------------------------ */
+    /* Channel tabs                                                 */
+    /* ------------------------------------------------------------ */
+    #tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      background: #111;
+      overflow-x: auto;
+    }
+
+    .tab {
+      padding: 0.4rem 0.75rem;
+      background: #333;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      transition: background 0.2s ease;
+    }
+    .tab:hover {
+      background: #444;
+    }
+    .tab.active {
+      background: #007aff;
+    }
+
+    /* ------------------------------------------------------------ */
+    /* Iframe player                                                */
+    /* ------------------------------------------------------------ */
+    #player {
       border: 0;
       width: 100%;
-      height: 100%;
+      flex: 1 1 auto; /* fill remaining space */
     }
   </style>
 </head>
 <body>
-  <!-- Embedded Flix player for the channel "premiere" -->
+  <!-- Dynamic tab bar will be injected here -->
+  <div id="tabs">Loading channels…</div>
+
+  <!-- Stream iframe -->
   <iframe
-    src="https://embedflix.top/tv/player.php?id=premiere"
+    id="player"
     allow="encrypted-media"
     allowfullscreen
+    referrerpolicy="no-referrer"
+    frameborder="0"
     frameborder="0"
   ></iframe>
+
+  <script>
+    /**
+     * Fetch channels.json from the current directory, build a tab for each
+     * entry, and wire up click / selection logic. Expected JSON format:
+     * [ { "name": "Globo RJ", "url": "https://…" }, … ]
+     */
+    (async function () {
+      const tabsEl = document.getElementById('tabs');
+      const player = document.getElementById('player');
+
+      try {
+        const res = await fetch('./channels.json');
+        if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+        const channels = await res.json();
+        if (!Array.isArray(channels) || channels.length === 0)
+          throw new Error('channels.json appears empty.');
+
+        // Build a <div.tab> for each channel
+        tabsEl.innerHTML = '';
+        channels.forEach((ch, idx) => {
+          const t = document.createElement('div');
+          t.className = 'tab';
+          t.textContent = ch.name || `Channel ${idx + 1}`;
+          t.dataset.url = ch.url;
+          t.addEventListener('click', () => selectTab(t));
+          tabsEl.appendChild(t);
+          if (idx === 0) selectTab(t); // auto‑select first channel
+        });
+
+        /** Activate given tab element */
+        function selectTab(tabEl) {
+          document
+            .querySelectorAll('.tab')
+            .forEach((el) => el.classList.toggle('active', el === tabEl));
+          player.src = tabEl.dataset.url;
+        }
+      } catch (err) {
+        console.error(err);
+        tabsEl.textContent = 'Failed to load channels.json – ' + err.message;
+      }
+    })();
+  </script>
 </body>
 </html>
