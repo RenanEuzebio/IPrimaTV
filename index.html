@@ -4,22 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Xtream HLS Channel Player</title>
-
-  <!-- hls.js -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
-  <!--
-    IMPORTANT
-    =========
-    This viewer is hosted over HTTPS, while many Xtream panels use plain HTTP.
-    Browsers will block “mixed content” XHR requests.  We therefore pipe every
-    playlist / segment request through one of several **public CORS proxies**.
-
-    • If one proxy returns 4xx/5xx, the loader automatically tries the next one.
-    • For complete reliability, deploy your own Cloudflare‑Worker proxy and
-      put its URL at the top of PROXIES below.
-  -->
-
   <style>
     :root{--bg-dark:#111;--bg-light:#1e1e1e;--accent:#007aff;--text:#fff;--muted:#bbb;}
     html,body{height:100%;margin:0;display:flex;background:var(--bg-dark);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;}
@@ -51,67 +36,81 @@
   const list=$('#channels'), search=$('#search'), vid=$('#video'), msg=$('#msg');
   let channels=[], hls=null, current=null;
 
-  /* ─── Helpers ─────────────────────────────────────────────── */
+  /* ── Helpers ── */
   const show=e=>{msg.textContent=e;msg.style.display='block';console.error(e);};
   const hide=()=>msg.style.display='none';
   const destroy=()=>{if(hls){hls.destroy();hls=null;}};
 
-  /* ─── Proxy rotation ──────────────────────────────────────── */
+  /* ── Proxy list (rotate on failure) ── */
   const PROXIES=[
-    // 1) add your own worker first for best reliability:
-    // 'https://your‑worker.<user>.workers.dev/',
+    // ① Add your own Cloudflare‑Worker for best reliability
+    // 'https://yourworker.example.workers.dev/?',
+    'https://r.jina.ai/http://',        // lightweight read proxy
     'https://cors.isomorphic-git.org/',
     'https://thingproxy.freeboard.io/fetch/',
     'https://api.allorigins.win/raw?url=',
   ];
-  let proxyIndex=0;
-  const wrap=(url)=>PROXIES[proxyIndex]+encodeURIComponent(url);
-  const nextProxy=()=>{proxyIndex=(proxyIndex+1)%PROXIES.length;};
+  const needsProxy = location.protocol==='https:';
 
-  const proxify=url=>location.protocol==='https:'&&url.startsWith('http:')?wrap(url):url;
-
-  /* ─── Load channels.json ─────────────────────────────────── */
+  /* ── Fetch channel list ── */
   try{
-    const r=await fetch('./channels.json');
-    if(!r.ok) throw new Error(r.status+' '+r.statusText);
-    channels=await r.json();
-  }catch(e){list.innerHTML='<li style="padding:1rem;color:#f66">Failed to load channels.json</li>';show(e.message);return;}
+    const res=await fetch('./channels.json');
+    if(!res.ok) throw new Error(res.statusText);
+    channels=await res.json();
+  }catch(err){list.innerHTML='<li style="padding:1rem;color:#f66">Failed to load channels.json</li>';show(err);return;}
   if(!channels.length){list.innerHTML='<li style="padding:1rem;color:#f66">channels.json empty</li>';return;}
 
-  /* ─── Render + search ─────────────────────────────────────── */
-  const render=f=>{list.innerHTML='';const lo=(f||'').toLowerCase();channels.forEach((c,i)=>{if(lo&&!c.name.toLowerCase().includes(lo))return;const li=document.createElement('li');li.className='item';li.textContent=c.name;li.dataset.i=i;li.onclick=()=>select(li);list.appendChild(li);});if(!list.firstChild)list.innerHTML='<li style="padding:0.8rem;color:var(--muted)">No matches</li>';};
+  /* ── Render search list ── */
+  const render=val=>{list.innerHTML='';const q=(val||'').toLowerCase();channels.forEach((c,i)=>{if(q&&!c.name.toLowerCase().includes(q))return;const li=document.createElement('li');li.className='item';li.textContent=c.name;li.dataset.i=i;li.onclick=()=>select(li);list.appendChild(li);});if(!list.firstChild)list.innerHTML='<li style="padding:0.8rem;color:var(--muted)">No matches</li>';};
   search.oninput=()=>render(search.value);
 
-  /* ─── Custom loader with dynamic proxy fallback ───────────── */
-  class RotatingProxyLoader extends Hls.DefaultConfig.loader{
+  /* ── Proxy helper ── */
+  function byProxy(url, index){return PROXIES[index]+encodeURIComponent(url);}  
+  function proxify(url,index){return needsProxy?byProxy(url,index):url;}
+
+  /* ── Custom loader with sequential proxy retry ── */
+  class RetryLoader extends Hls.DefaultConfig.loader{
     constructor(cfg){super(cfg);}    
-    load(ctx,conf,cb){ctx.url=proxify(ctx.url);const orig=ctx.url;const wrapped=this;
-      const tryLoad=(attempt=0)=>{
-        super.load(ctx,conf,{
-          onSuccess:(...a)=>cb.onSuccess(...a),
-          onProgress:cb.onProgress,
-          onError:(e)=>{
-            if(attempt<PROXIES.length-1){nextProxy();ctx.url=wrap(orig.replace(PROXIES[proxyIndex-1],'').replace(/^https:\/\/|^http:\/\//,''));tryLoad(attempt+1);}else cb.onError(e);
+    load(ctx,cfg,cbs){
+      const raw = ctx.url.startsWith('http')?ctx.url:cfg.uri||ctx.url;
+      let attempt=0;
+      const tryLoad=()=>{
+        ctx.url = proxify(raw,attempt);
+        super.load(ctx,cfg,{
+          onSuccess:(...a)=>cbs.onSuccess(...a),
+          onProgress:cbs.onProgress,
+          onError:(err)=>{
+            if(needsProxy && ++attempt<PROXIES.length){tryLoad();}
+            else cbs.onError(err);
           }
         });
-      };tryLoad();
+      };
+      tryLoad();
     }
   }
 
-  /* ─── Playback ─────────────────────────────────────────────── */
-  function play(ch){destroy();hide();proxyIndex=0;
-    const base=ch.url.split('?')[0];const first=proxify(base);const fallback=proxify(ch.url);
+  /* ── Playback ── */
+  function play(ch){destroy();hide();
+    let raw=ch.url.split('?')[0]; // fresh redirect path (no token)
+    const alt=ch.url;             // original with token
+
     const start=url=>{
-      if(url.endsWith('.m3u8')&&Hls.isSupported()){
-        hls=new Hls({loader:RotatingProxyLoader,xhrSetup:x=>x.withCredentials=false});
-        hls.loadSource(url);hls.attachMedia(vid);
+      const src = needsProxy?byProxy(url,0):url; // first attempt via first proxy (or direct)
+      if(Hls.isSupported() && src.endsWith('.m3u8')){
+        hls=new Hls({loader:RetryLoader});
+        hls.loadSource(src);
+        hls.attachMedia(vid);
         hls.on(Hls.Events.ERROR,(ev,d)=>{
           if(d.fatal&&d.type==='networkError'){
-            if(url!==fallback){start(fallback);return;}show('All proxies failed or stream offline');}
+            // if we were on tokenless url, try original tokened one via proxy stack
+            if(url!==alt){start(alt);return;}
+            show('Stream unreachable via available proxies');
+          }
         });
-      }else if(vid.canPlayType('application/vnd.apple.mpegurl')){vid.src=url;vid.play();}
-      else{vid.src=url;vid.play();}
-    };start(first);
+      }else if(vid.canPlayType('application/vnd.apple.mpegurl')){vid.src=src;vid.play();}
+      else{vid.src=src;vid.play();}
+    };
+    start(raw);
   }
 
   function select(li){if(current)current.classList.remove('active');current=li;current.classList.add('active');play(channels[li.dataset.i]);}
