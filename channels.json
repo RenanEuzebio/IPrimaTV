@@ -1,0 +1,338 @@
+[
+  {
+    "name": "Globo RJ",
+    "url": "https://embedflix.top/tv/player.php?id=globo-sp"
+  },
+  {
+    "name": "Globo MG",
+    "url": "https://embedflix.top/tv/player.php?id=globo-rj"
+  },
+  {
+    "name": "SBT",
+    "url": "https://embedflix.top/tv/player.php?id=globo-mg"
+  },
+  {
+    "name": "Record TV",
+    "url": "https://embedflix.top/tv/player.php?id=sbt"
+  },
+  {
+    "name": "Band",
+    "url": "https://embedflix.top/tv/player.php?id=record-tv"
+  },
+  {
+    "name": "RedeTV!",
+    "url": "https://embedflix.top/tv/player.php?id=band"
+  },
+  {
+    "name": "TV Cultura",
+    "url": "https://embedflix.top/tv/player.php?id=rede-tv"
+  },
+  {
+    "name": "SporTV",
+    "url": "https://embedflix.top/tv/player.php?id=cultura"
+  },
+  {
+    "name": "SporTV 2",
+    "url": "https://embedflix.top/tv/player.php?id=sportv"
+  },
+  {
+    "name": "SporTV 3",
+    "url": "https://embedflix.top/tv/player.php?id=sportv-2"
+  },
+  {
+    "name": "ESPN Brasil",
+    "url": "https://embedflix.top/tv/player.php?id=sportv-3"
+  },
+  {
+    "name": "ESPN 2",
+    "url": "https://embedflix.top/tv/player.php?id=espn"
+  },
+  {
+    "name": "ESPN 3",
+    "url": "https://embedflix.top/tv/player.php?id=espn-2"
+  },
+  {
+    "name": "ESPN 4",
+    "url": "https://embedflix.top/tv/player.php?id=espn-3"
+  },
+  {
+    "name": "Fox Sports",
+    "url": "https://embedflix.top/tv/player.php?id=espn-4"
+  },
+  {
+    "name": "Fox Sports 2",
+    "url": "https://embedflix.top/tv/player.php?id=fox-sports"
+  },
+  {
+    "name": "Premiere FC",
+    "url": "https://embedflix.top/tv/player.php?id=fox-sports-2"
+  },
+  {
+    "name": "Premiere 2",
+    "url": "https://embedflix.top/tv/player.php?id=premiere"
+  },
+  {
+    "name": "Premiere 3",
+    "url": "https://embedflix.top/tv/player.php?id=premiere-2"
+  },
+  {
+    "name": "Premiere 4",
+    "url": "https://embedflix.top/tv/player.php?id=premiere-3"
+  },
+  {
+    "name": "Premiere 5",
+    "url": "https://embedflix.top/tv/player.php?id=premiere-4"
+  },
+  {
+    "name": "Premiere 6",
+    "url": "https://embedflix.top/tv/player.php?id=premiere-5"
+  },
+  {
+    "name": "Premiere 7",
+    "url": "https://embedflix.top/tv/player.php?id=premiere-6"
+  },
+  {
+    "name": "Band Sports",
+    "url": "https://embedflix.top/tv/player.php?id=premiere-7"
+  },
+  {
+    "name": "Combate",
+    "url": "https://embedflix.top/tv/player.php?id=band-sports"
+  },
+  {
+    "name": "Ei Plus",
+    "url": "https://embedflix.top/tv/player.php?id=combate"
+  },
+  {
+    "name": "Fish TV",
+    "url": "https://embedflix.top/tv/player.php?id=ei-plus"
+  },
+  {
+    "name": "CNN Brasil",
+    "url": "https://embedflix.top/tv/player.php?id=fish-tv"
+  },
+  {
+    "name": "GloboNews",
+    "url": "https://embedflix.top/tv/player.php?id=cnn-brasil"
+  },
+  {
+    "name": "BandNews TV",
+    "url": "https://embedflix.top/tv/player.php?id=globo-news"
+  },
+  {
+    "name": "Record News",
+    "url": "https://embedflix.top/tv/player.php?id=band-news"
+  },
+  {
+    "name": "SBT News",
+    "url": "https://embedflix.top/tv/player.php?id=record-news"
+  },
+  {
+    "name": "Cartoon Network",
+    "url": "https://embedflix.top/tv/player.php?id=sbt-news"
+  },
+  {
+    "name": "Disney Channel",
+    "url": "https://embedflix.top/tv/player.php?id=cartoon-network"
+  },
+  {
+    "name": "Disney Junior",
+    "url": "https://embedflix.top/tv/player.php?id=disney-channel"
+  },
+  {
+    "name": "Nickelodeon",
+    "url": "https://embedflix.top/tv/player.php?id=disney-junior"
+  },
+  {
+    "name": "Nick Jr",
+    "url": "https://embedflix.top/tv/player.php?id=nickelodeon"
+  },
+  {
+    "name": "Discovery Channel",
+    "url": "https://embedflix.top/tv/player.php?id=nick-jr"
+  },
+  {
+    "name": "Discovery Kids",
+    "url": "https://embedflix.top/tv/player.php?id=discovery-channel"
+  },
+  {
+    "name": "Animal Planet",
+    "url": "https://embedflix.top/tv/player.php?id=discovery-kids"
+  },
+  {
+    "name": "History Channel",
+    "url": "https://embedflix.top/tv/player.php?id=animal-planet"
+  },
+  {
+    "name": "National Geographic",
+    "url": "https://embedflix.top/tv/player.php?id=history-channel"
+  },
+  {
+    "name": "Telecine Action",
+    "url": "https://embedflix.top/tv/player.php?id=national-geographic"
+  },
+  {
+    "name": "Telecine Premium",
+    "url": "https://embedflix.top/tv/player.php?id=telecine-action"
+  },
+  {
+    "name": "Telecine Pipoca",
+    "url": "https://embedflix.top/tv/player.php?id=telecine-premium"
+  },
+  {
+    "name": "Telecine Fun",
+    "url": "https://embedflix.top/tv/player.php?id=telecine-pipoca"
+  },
+  {
+    "name": "Telecine Touch",
+    "url": "https://embedflix.top/tv/player.php?id=telecine-fun"
+  },
+  {
+    "name": "Telecine Cult",
+    "url": "https://embedflix.top/tv/player.php?id=telecine-touch"
+  },
+  {
+    "name": "HBO",
+    "url": "https://embedflix.top/tv/player.php?id=telecine-cult"
+  },
+  {
+    "name": "HBO 2",
+    "url": "https://embedflix.top/tv/player.php?id=hbo"
+  },
+  {
+    "name": "HBO Plus",
+    "url": "https://embedflix.top/tv/player.php?id=hbo-2"
+  },
+  {
+    "name": "HBO Family",
+    "url": "https://embedflix.top/tv/player.php?id=hbo-plus"
+  },
+  {
+    "name": "Max Prime",
+    "url": "https://embedflix.top/tv/player.php?id=hbo-family"
+  },
+  {
+    "name": "Max Up",
+    "url": "https://embedflix.top/tv/player.php?id=max-prime"
+  },
+  {
+    "name": "Cinemax",
+    "url": "https://embedflix.top/tv/player.php?id=max-up"
+  },
+  {
+    "name": "Megapix",
+    "url": "https://embedflix.top/tv/player.php?id=cinemax"
+  },
+  {
+    "name": "FX",
+    "url": "https://embedflix.top/tv/player.php?id=megapix"
+  },
+  {
+    "name": "FOX",
+    "url": "https://embedflix.top/tv/player.php?id=fx"
+  },
+  {
+    "name": "Sony Channel",
+    "url": "https://embedflix.top/tv/player.php?id=fox"
+  },
+  {
+    "name": "Warner Channel",
+    "url": "https://embedflix.top/tv/player.php?id=sony-channel"
+  },
+  {
+    "name": "Universal Channel",
+    "url": "https://embedflix.top/tv/player.php?id=warner-channel"
+  },
+  {
+    "name": "AXN",
+    "url": "https://embedflix.top/tv/player.php?id=universal-channel"
+  },
+  {
+    "name": "TNT",
+    "url": "https://embedflix.top/tv/player.php?id=axn"
+  },
+  {
+    "name": "Space",
+    "url": "https://embedflix.top/tv/player.php?id=tnt"
+  },
+  {
+    "name": "MTV",
+    "url": "https://embedflix.top/tv/player.php?id=space"
+  },
+  {
+    "name": "Multishow",
+    "url": "https://embedflix.top/tv/player.php?id=mtv"
+  },
+  {
+    "name": "Comedy Central",
+    "url": "https://embedflix.top/tv/player.php?id=multishow"
+  },
+  {
+    "name": "Paramount Network",
+    "url": "https://embedflix.top/tv/player.php?id=comedy-central"
+  },
+  {
+    "name": "E! Entertainment",
+    "url": "https://embedflix.top/tv/player.php?id=paramount-network"
+  },
+  {
+    "name": "Lifetime",
+    "url": "https://embedflix.top/tv/player.php?id=e-entertainment"
+  },
+  {
+    "name": "TLC",
+    "url": "https://embedflix.top/tv/player.php?id=lifetime"
+  },
+  {
+    "name": "Food Network",
+    "url": "https://embedflix.top/tv/player.php?id=tlc"
+  },
+  {
+    "name": "HGTV",
+    "url": "https://embedflix.top/tv/player.php?id=food-network"
+  },
+  {
+    "name": "Investigation Discovery",
+    "url": "https://embedflix.top/tv/player.php?id=hgtv"
+  },
+  {
+    "name": "Travel Channel",
+    "url": "https://embedflix.top/tv/player.php?id=investigation-discovery"
+  },
+  {
+    "name": "UFC Fight Pass",
+    "url": "https://embedflix.top/tv/player.php?id=travel-channel"
+  },
+  {
+    "name": "teste",
+    "url": "https://embedflix.top/tv/player.php?id=ufc-fight-pass"
+  },
+  {
+    "name": "Caze TV #1",
+    "url": "https://embedflix.top/tv/player.php?id=teste2"
+  },
+  {
+    "name": "Caze TV #2",
+    "url": "https://embedflix.top/tv/player.php?id=caze-tv-1"
+  },
+  {
+    "name": "PRIME VIDEO #1",
+    "url": "https://embedflix.top/tv/player.php?id=caze-tv-2"
+  },
+  {
+    "name": "PRIME VIDEO #2",
+    "url": "https://embedflix.top/tv/player.php?id=prime-video-1"
+  },
+  {
+    "name": "PRIME VIDEO #3",
+    "url": "https://embedflix.top/tv/player.php?id=prime-video-2"
+  },
+  {
+    "name": "Paramount #1",
+    "url": "https://embedflix.top/tv/player.php?id=prime-video-3"
+  },
+  {
+    "name": "Embedflix",
+    "url": "https://embedflix.top/tv/player.php?id=paramount-1"
+  }
+]
