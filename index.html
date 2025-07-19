@@ -1,56 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-<meta charset="utf-8">
-<title>WebTorrent Minimal Player</title>
-<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
-<style>
-  body { font-family: system-ui, sans-serif; margin: 1rem; }
-  video { width: 100%; max-width: 640px; background:#000; }
-</style>
+  <meta charset="utf-8">
+  <title>WebTorrent & Plyr demo</title>
+  <!-- WebTorrent -->
+  <script src="//cdn.jsdelivr.net/webtorrent/latest/webtorrent.min.js"></script>
+
+  <!-- Plyr-->
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/plyr/3.1.0/plyr.css" />
+  <script src="//cdnjs.cloudflare.com/ajax/libs/plyr/3.1.0/plyr.min.js"></script>
 </head>
+
 <body>
-<video id="video" controls autoplay playsinline></video>
-
-<script>
-/*
-  Trimmed magnet: only WSS trackers that commonly work in browsers.
-  (You can add more wss:// trackers if needed.)
-*/
-const magnet = 'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10'
-  + '&dn=Sintel'
-  + '&tr=wss://tracker.openwebtorrent.com'
-  + '&tr=wss://tracker.webtorrent.dev';
-
-/*
-  Custom rtcConfig: remove Twilio entry that caused your RTCPeerConnection error.
-  (Add more STUN servers if you like.)
-*/
-const client = new WebTorrent({
-  tracker: {
-    rtcConfig: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-      ]
-    }
-  }
-});
-
-const videoEl = document.getElementById('video');
-
-client.add(magnet, torrent => {
-  const file = torrent.files.find(f => f.name.endsWith('.mp4')) || torrent.files[0];
-  if (!file) return console.error('No playable file found in torrent.');
-
-  // Stream directly into existing <video>
-  file.renderTo(videoEl, { autoplay: true }, err => {
-    if (err) return console.error(err);
-    console.log('Streaming started.');
-  });
-});
-
-client.on('error', err => console.error('WebTorrent error:', err));
-</script>
+  <video id="player" controls></video>
 </body>
+
+<script type="text/javascript">
+  var client = new WebTorrent();
+  var torrentId =
+    'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=udp%3A%2F%2Fexplodie.org%3A6969&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.empire-js.us%3A1337&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.fastcast.nz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&ws=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2F&xs=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2Fsintel.torrent';
+
+  const player = new Plyr('#player', {
+    debug: true
+  });
+
+  client.add(torrentId, function(torrent) {
+    var file = torrent.files.find(function(file) {
+      return file.name.endsWith('.mp4')
+    });
+    file.renderTo('video', {
+      autoplay: false,
+      muted: true
+    }, function callback() {
+      console.log("ready to play!");
+    });
+  });
+</script>
+
 </html>
