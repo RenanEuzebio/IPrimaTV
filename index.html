@@ -1,40 +1,51 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>WebTorrent & Plyr demo</title>
-  <!-- WebTorrent -->
-  <script src="//cdn.jsdelivr.net/webtorrent/latest/webtorrent.min.js"></script>
-
-  <!-- Plyr-->
-  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/plyr/3.1.0/plyr.css" />
-  <script src="//cdnjs.cloudflare.com/ajax/libs/plyr/3.1.0/plyr.min.js"></script>
+<meta charset="utf-8">
+<title>WebTorrent + Plyr (Minimal)</title>
+<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.1.0/plyr.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.1.0/plyr.min.js"></script>
+<style>
+  body { font-family: system-ui, sans-serif; margin:1rem; }
+  video { width:100%; max-width:640px; background:#000; }
+</style>
 </head>
-
 <body>
-  <video id="player" controls></video>
-</body>
+<video id="player" controls playsinline></video>
 
-<script type="text/javascript">
-  var client = new WebTorrent();
-  var torrentId =
-    'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=udp%3A%2F%2Fexplodie.org%3A6969&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.empire-js.us%3A1337&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.fastcast.nz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&ws=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2F&xs=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2Fsintel.torrent';
+<script>
+const magnet = 'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10'
+  + '&dn=Sintel'
+  + '&tr=wss://tracker.openwebtorrent.com'
+  + '&tr=wss://tracker.webtorrent.dev';
 
-  const player = new Plyr('#player', {
-    debug: true
+const client = new WebTorrent({
+  tracker: {
+    rtcConfig: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    }
+  }
+});
+
+// Initialize Plyr on the existing <video>
+const plyrInstance = new Plyr('#player', { debug: false });
+
+client.add(magnet, torrent => {
+  const file = torrent.files.find(f => f.name.endsWith('.mp4')) || torrent.files[0];
+  if (!file) return console.error('No playable file found.');
+
+  // Render directly into the real <video> element (Plyr keeps working)
+  file.renderTo(plyrInstance.media, { autoplay: true }, err => {
+    if (err) return console.error(err);
+    console.log('Streaming via Plyr.');
   });
+});
 
-  client.add(torrentId, function(torrent) {
-    var file = torrent.files.find(function(file) {
-      return file.name.endsWith('.mp4')
-    });
-    file.renderTo('video', {
-      autoplay: false,
-      muted: true
-    }, function callback() {
-      console.log("ready to play!");
-    });
-  });
+client.on('error', err => console.error('WebTorrent error:', err));
 </script>
-
+</body>
 </html>
