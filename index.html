@@ -1,40 +1,138 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>WebTorrent & Plyr demo</title>
-  <!-- WebTorrent -->
-  <script src="//cdn.jsdelivr.net/webtorrent/latest/webtorrent.min.js"></script>
+  <title>WebTorrent & Media Chrome Demo</title>
 
-  <!-- Plyr-->
-  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/plyr/3.1.0/plyr.css" />
-  <script src="//cdnjs.cloudflare.com/ajax/libs/plyr/3.1.0/plyr.min.js"></script>
+  <!-- WebTorrent (browser build) -->
+  <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+
+  <!-- Media Chrome (modern player UI as Web Components) -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/media-chrome@1/+esm"></script>
+
+  <style>
+    body {
+      font-family: system-ui, Arial, sans-serif;
+      margin: 1rem;
+      background: #111;
+      color: #eee;
+    }
+    media-controller, video {
+      max-width: 960px;
+      width: 100%;
+      background: #000;
+    }
+    media-time-range,
+    media-volume-range {
+      --media-range-track-height: 4px;
+    }
+    #log {
+      font-size: 0.75rem;
+      max-width: 960px;
+      margin-top: 1rem;
+      line-height: 1.3;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+    }
+    #log .err { color: #ff6b6b; }
+  </style>
 </head>
-
 <body>
-  <video id="player" controls></video>
+
+  <h1>WebTorrent + Modern Player (Media Chrome)</h1>
+
+  <!-- Player UI (Media Chrome wraps a native <video>) -->
+  <media-controller id="controller" autoplay="false">
+    <!-- Your actual video element that WebTorrent will stream into -->
+    <video id="player" slot="media" playsinline></video>
+
+    <!-- Top controls (optional) -->
+    <media-control-bar slot="top-chrome">
+      <media-title></media-title>
+      <media-live-button></media-live-button>
+    </media-control-bar>
+
+    <!-- Center play button overlay -->
+    <media-center-controls>
+      <media-play-button></media-play-button>
+    </media-center-controls>
+
+    <!-- Main control bar -->
+    <media-control-bar>
+      <media-play-button></media-play-button>
+      <media-seek-backward-button seconds="10"></media-seek-backward-button>
+      <media-seek-forward-button seconds="10"></media-seek-forward-button>
+      <media-time-range></media-time-range>
+      <media-time-display show-duration remaining></media-time-display>
+      <media-volume-range></media-volume-range>
+      <media-mute-button></media-mute-button>
+      <media-captions-button></media-captions-button>
+      <media-playback-rate-button></media-playback-rate-button>
+      <media-fullscreen-button></media-fullscreen-button>
+    </media-control-bar>
+
+    <!-- Loading indicator -->
+    <media-loading-indicator slot="centered-chrome"></media-loading-indicator>
+  </media-controller>
+
+  <div id="log"></div>
+
+  <script>
+    // --- WebTorrent logic (unchanged in spirit) ---
+    const client = new WebTorrent();
+
+    const torrentId =
+      'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=udp%3A%2F%2Fexplodie.org%3A6969&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.empire-js.us%3A1337&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.fastcast.nz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&ws=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2F&xs=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2Fsintel.torrent';
+
+    const videoEl = document.getElementById('player');
+    const logEl   = document.getElementById('log');
+    const controller = document.getElementById('controller');
+
+    function log(msg, err = false) {
+      const line = document.createElement('div');
+      if (err) line.classList.add('err');
+      line.textContent = msg;
+      logEl.appendChild(line);
+    }
+
+    client.on('error', e => log('Client error: ' + e.message, true));
+
+    client.add(torrentId, torrent => {
+      log('Metadata received: ' + torrent.name);
+
+      // Update the visible title (optional)
+      controller.setAttribute('media-title', torrent.name);
+
+      const file = torrent.files.find(f => f.name.toLowerCase().endsWith('.mp4'))
+               || torrent.files.find(f => /\.(webm|m4v|ogg)$/i.test(f.name))
+               || torrent.files[0];
+
+      if (!file) {
+        log('No playable video file found in torrent.', true);
+        return;
+      }
+
+      // Stream into existing <video> element
+      file.renderTo(videoEl, { autoplay: false, muted: true }, () => {
+        log('Video element is ready to play.');
+      });
+
+      // (Optional) Log segment / range requests from the player
+      file.on('stream', ({ req }) => {
+        if (req.destination === 'video') {
+          log('Range requested: ' + (req.headers.range || 'full file'));
+        }
+      });
+
+      torrent.on('download', bytes => {
+        log('Downloaded piece: ' + bytes + ' bytes (progress '
+            + (torrent.progress * 100).toFixed(2) + '%)');
+      });
+
+      torrent.on('done', () => {
+        log('Download complete. Seeding...');
+      });
+    });
+  </script>
 </body>
-
-<script type="text/javascript">
-  var client = new WebTorrent();
-  var torrentId =
-    'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=udp%3A%2F%2Fexplodie.org%3A6969&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.empire-js.us%3A1337&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.fastcast.nz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&ws=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2F&xs=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2Fsintel.torrent';
-
-  const player = new Plyr('#player', {
-    debug: true
-  });
-
-  client.add(torrentId, function(torrent) {
-    var file = torrent.files.find(function(file) {
-      return file.name.endsWith('.mp4')
-    });
-    file.renderTo('video', {
-      autoplay: false,
-      muted: true
-    }, function callback() {
-      console.log("ready to play!");
-    });
-  });
-</script>
-
 </html>
