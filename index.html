@@ -2,33 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>WebTorrent & Media Chrome Demo</title>
+  <title>WebTorrent + Media Chrome (No Duplicate Controls)</title>
 
   <!-- WebTorrent (browser build) -->
   <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 
-  <!-- Media Chrome (Web Components) -->
+  <!-- Media Chrome -->
   <script type="module" src="https://cdn.jsdelivr.net/npm/media-chrome/dist/index.js"></script>
 
   <style>
-    body { font-family: system-ui, Arial, sans-serif; margin: 1rem; }
-    media-controller, video { max-width: 800px; width: 100%; }
-    #status { font: 12px/1.4 ui-monospace, monospace; margin-top: .75rem; }
-    #progress { display:inline-block; width:140px; height:6px; background:#ddd; vertical-align:middle; margin-left:6px; border-radius:3px; overflow:hidden; }
+    body { font-family: system-ui, sans-serif; margin: 1rem; }
+    media-controller, video { max-width: 820px; width: 100%; }
+    #status { font: 12px/1.4 ui-monospace, monospace; margin-top:.75rem; }
+    #progress { display:inline-block; width:140px; height:6px; background:#ddd; margin-left:6px; border-radius:3px; overflow:hidden; vertical-align:middle; }
     #bar { height:100%; width:0; background:#4caf50; transition:width .3s; }
   </style>
 </head>
 <body>
   <h1>WebTorrent + Media Chrome</h1>
 
-  <!-- Media Chrome player -->
   <media-controller id="mc">
-    <video id="player" slot="media" playsinline crossorigin controls></video>
+    <!-- NOTE: no 'controls' attribute here -->
+    <video id="player" slot="media" playsinline></video>
 
-    <!-- Center loading indicator -->
     <media-loading-indicator slot="centered-chrome"></media-loading-indicator>
 
-    <!-- Control bar -->
     <media-control-bar>
       <media-play-button></media-play-button>
       <media-seek-backward-button seconds="10"></media-seek-backward-button>
@@ -42,7 +40,7 @@
   </media-controller>
 
   <div id="status">
-    <span id="msg">Initializing…</span>
+    <span id="msg">Adding torrent…</span>
     <span id="progress"><span id="bar"></span></span>
   </div>
 
@@ -61,25 +59,20 @@
       msgEl.textContent = 'Error: ' + err.message;
     });
 
-    msgEl.textContent = 'Adding torrent…';
-
     client.add(torrentId, torrent => {
-      msgEl.textContent = 'Metadata received: ' + torrent.name;
+      msgEl.textContent = 'Metadata: ' + torrent.name;
 
-      // Choose first .mp4
       const file = torrent.files.find(f => f.name.endsWith('.mp4')) || torrent.files[0];
       if (!file) {
-        msgEl.textContent = 'No playable file in torrent.';
+        msgEl.textContent = 'No playable file.';
         return;
       }
 
-      // Stream into existing <video> (progressive, not full pre-download)
+      // SINGLE render call (avoid multiple pipes)
       file.renderTo(videoEl, { autoplay: false }, () => {
         console.log('Ready to play!');
-        msgEl.textContent = 'Streaming: ' + file.name;
       });
 
-      // Update status
       function update() {
         const pct = (torrent.progress * 100) || 0;
         barEl.style.width = pct.toFixed(2) + '%';
@@ -87,25 +80,22 @@
           `${torrent.numPeers} peer${torrent.numPeers===1?'':'s'} | ${pct.toFixed(1)}% | ↓ ${pretty(torrent.downloadSpeed)}/s ↑ ${pretty(torrent.uploadSpeed)}/s` +
           (torrent.done ? ' | Seeding' : '');
       }
-
       torrent.on('download', update);
       torrent.on('upload', update);
       torrent.on('wire', update);
       torrent.on('done', update);
-
-      // Poll for smoother UI
-      const interval = setInterval(() => {
-        if (torrent.done) { clearInterval(interval); }
+      const iv = setInterval(() => {
         update();
+        if (torrent.done) clearInterval(iv);
       }, 750);
       update();
     });
 
     function pretty(bytes) {
       if (!bytes) return '0 B';
-      const units = ['B','kB','MB','GB','TB'];
-      const e = Math.min(Math.floor(Math.log(bytes)/Math.log(1000)), units.length-1);
-      return (bytes / Math.pow(1000,e)).toFixed(2) + ' ' + units[e];
+      const u = ['B','kB','MB','GB','TB'];
+      const e = Math.min(Math.floor(Math.log(bytes)/Math.log(1000)), u.length-1);
+      return (bytes / Math.pow(1000,e)).toFixed(2) + ' ' + u[e];
     }
   </script>
 </body>
