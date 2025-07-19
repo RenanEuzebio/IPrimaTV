@@ -1,177 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Xtream HLS Channel Player</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <style>
-    :root{--bg-dark:#111;--bg-light:#1e1e1e;--accent:#007aff;--text:#fff;--muted:#bbb;}
-    html,body{height:100%;margin:0;display:flex;background:var(--bg-dark);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;}
-    #sidebar{width:300px;background:var(--bg-light);display:flex;flex-direction:column;border-right:2px solid #000;}
-    #search-container{display:flex;gap:0.5rem;margin:0.5rem;}
-    #search{flex:1;padding:0.5rem 0.7rem;border:none;border-radius:4px;background:#272727;color:var(--text);font-size:0.9rem;}
-    #prefix-filter{padding:0.5rem 0.7rem;border:none;border-radius:4px;background:#272727;color:var(--text);font-size:0.9rem;cursor:pointer;}
-    #channels{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;list-style:none;margin:0;padding:0;}
-    .item{padding:0.65rem 0.9rem;border-bottom:1px solid #222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:background .2s;}
-    .item:hover{background:#2d2d2d;}
-    .item.active{background:var(--accent);}  
-    #wrap{flex:1;display:flex;flex-direction:column;}
-    video{width:100%;height:100%;background:#000;}
-    #msg{display:none;padding:0.5rem;font-size:0.9rem;background:#222;color:#f66;max-height:4rem;overflow-y:auto;}
-  </style>
+  <meta charset="utf-8">
+  <title>WebTorrent & Plyr demo</title>
+  <!-- WebTorrent -->
+  <script src="//cdn.jsdelivr.net/webtorrent/latest/webtorrent.min.js"></script>
+
+  <!-- Plyr-->
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/plyr/3.1.0/plyr.css" />
+  <script src="//cdnjs.cloudflare.com/ajax/libs/plyr/3.1.0/plyr.min.js"></script>
 </head>
+
 <body>
-  <aside id="sidebar">
-    <div id="search-container">
-      <input id="search" type="text" placeholder="Search channels…" style="width: 100%;" />
-      <select id="prefix-filter">
-        <option value="">All</option>
-      </select>
-    </div>
-    <ul id="channels"><li style="padding:1rem;color:var(--muted)">Loading…</li></ul>
-  </aside>
-
-  <div id="wrap">
-    <div id="msg"></div>
-    <video id="video" controls autoplay muted></video>
-  </div>
-
-<script>
-(async()=>{
-  const $=q=>document.querySelector(q);
-  const list=$('#channels'), search=$('#search'), vid=$('#video'), msg=$('#msg'), prefixFilter=$('#prefix-filter');
-  let channels=[], hls=null, current=null;
-
-  /* ── Helpers ── */
-  const show=e=>{msg.textContent=e;msg.style.display='block';console.error(e);};
-  const hide=()=>msg.style.display='none';
-  const destroy=()=>{if(hls){hls.destroy();hls=null;}};
-
-  /* ── Proxy list (rotate on failure) ── */
-  const PROXIES=[
-    // ① Add your own Cloudflare‑Worker for best reliability
-    // 'https://yourworker.example.workers.dev/?',
-    'https://r.jina.ai/http://',        // lightweight read proxy
-    'https://cors.isomorphic-git.org/',
-    'https://thingproxy.freeboard.io/fetch/',
-    'https://api.allorigins.win/raw?url=',
-  ];
-  const needsProxy = location.protocol==='https:';
-
-  /* ── Fetch channel list ── */
-  try{
-    const res=await fetch('./channels.json');
-    if(!res.ok) throw new Error(res.statusText);
-    channels=await res.json();
-  }catch(err){list.innerHTML='<li style="padding:1rem;color:#f66">Failed to load channels.json</li>';show(err);return;}
-  if(!channels.length){list.innerHTML='<li style="padding:1rem;color:#f66">channels.json empty</li>';return;}
-
-  /* ─── Extract and populate prefixes ───────────────────────── */
-  const extractPrefixes=()=>{
-    const prefixes=new Set();
-    channels.forEach(c=>{
-      // Extract prefix pattern (letters followed by colon at start of name)
-      const match=c.name.match(/^([A-Z]+):/i);
-      if(match) prefixes.add(match[1].toUpperCase());
-    });
-    // Sort prefixes alphabetically
-    const sorted=Array.from(prefixes).sort();
-    // Populate dropdown
-    prefixFilter.innerHTML='<option value="">All</option>';
-    sorted.forEach(p=>{
-      const opt=document.createElement('option');
-      opt.value=p;
-      opt.textContent=p;
-      prefixFilter.appendChild(opt);
-    });
-  };
-  extractPrefixes();
-
-  /* ─── Render + search ─────────────────────────────────────── */
-  const render=()=>{
-    list.innerHTML='';
-    const searchQuery=(search.value||'').trim().toLowerCase();
-    const selectedPrefix=prefixFilter.value;
-    
-    channels.forEach((c,i)=>{
-      // Apply prefix filter first
-      if(selectedPrefix){
-        if(!c.name.toUpperCase().startsWith(selectedPrefix+':'))return;
-      }
-      
-      // Then apply search filter
-      if(searchQuery){
-        if(!c.name.toLowerCase().includes(searchQuery))return;
-      }
-      
-      const li=document.createElement('li');
-      li.className='item';
-      li.textContent=c.name;
-      li.dataset.i=i;
-      li.onclick=()=>select(li);
-      list.appendChild(li);
-    });
-    
-    if(!list.firstChild)list.innerHTML='<li style="padding:0.8rem;color:var(--muted)">No matches</li>';
-  };
-  
-  search.oninput=()=>render();
-  prefixFilter.onchange=()=>render();
-
-  /* ── Proxy helper ── */
-  function byProxy(url, index){return PROXIES[index]+encodeURIComponent(url);}  
-  function proxify(url,index){return needsProxy?byProxy(url,index):url;}
-
-  /* ── Custom loader with sequential proxy retry ── */
-  class RetryLoader extends Hls.DefaultConfig.loader{
-    constructor(cfg){super(cfg);}    
-    load(ctx,cfg,cbs){
-      const raw = ctx.url.startsWith('http')?ctx.url:cfg.uri||ctx.url;
-      let attempt=0;
-      const tryLoad=()=>{
-        ctx.url = proxify(raw,attempt);
-        super.load(ctx,cfg,{
-          onSuccess:(...a)=>cbs.onSuccess(...a),
-          onProgress:cbs.onProgress,
-          onError:(err)=>{
-            if(needsProxy && ++attempt<PROXIES.length){tryLoad();}
-            else cbs.onError(err);
-          }
-        });
-      };
-      tryLoad();
-    }
-  }
-
-  /* ── Playback ── */
-  function play(ch){destroy();hide();
-    let raw=ch.url.split('?')[0]; // fresh redirect path (no token)
-    const alt=ch.url;             // original with token
-
-    const start=url=>{
-      const src = needsProxy?byProxy(url,0):url; // first attempt via first proxy (or direct)
-      if(Hls.isSupported() && src.endsWith('.m3u8')){
-        hls=new Hls({loader:RetryLoader});
-        hls.loadSource(src);
-        hls.attachMedia(vid);
-        hls.on(Hls.Events.ERROR,(ev,d)=>{
-          if(d.fatal&&d.type==='networkError'){
-            // if we were on tokenless url, try original tokened one via proxy stack
-            if(url!==alt){start(alt);return;}
-            show('Stream unreachable via available proxies');
-          }
-        });
-      }else if(vid.canPlayType('application/vnd.apple.mpegurl')){vid.src=src;vid.play();}
-      else{vid.src=src;vid.play();}
-    };
-    start(raw);
-  }
-
-  function select(li){if(current)current.classList.remove('active');current=li;current.classList.add('active');play(channels[li.dataset.i]);}
-
-  render();const first=list.querySelector('.item');if(first)select(first);
-})();
-</script>
+  <video id="player" controls></video>
 </body>
+
+<script type="text/javascript">
+  var client = new WebTorrent();
+  var torrentId =
+    'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=udp%3A%2F%2Fexplodie.org%3A6969&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.empire-js.us%3A1337&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.fastcast.nz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&ws=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2F&xs=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2Fsintel.torrent';
+
+  const player = new Plyr('#player', {
+    debug: true
+  });
+
+  client.add(torrentId, function(torrent) {
+    var file = torrent.files.find(function(file) {
+      return file.name.endsWith('.mp4')
+    });
+    file.renderTo('video', {
+      autoplay: false,
+      muted: true
+    }, function callback() {
+      console.log("ready to play!");
+    });
+  });
+</script>
+
 </html>
