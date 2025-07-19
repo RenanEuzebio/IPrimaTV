@@ -1,138 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>WebTorrent & Media Chrome Demo</title>
 
   <!-- WebTorrent (browser build) -->
   <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 
-  <!-- Media Chrome (modern player UI as Web Components) -->
-  <script type="module" src="https://cdn.jsdelivr.net/npm/media-chrome@1/+esm"></script>
+  <!-- Media Chrome (Web Components) -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/media-chrome/dist/index.js"></script>
 
   <style>
-    body {
-      font-family: system-ui, Arial, sans-serif;
-      margin: 1rem;
-      background: #111;
-      color: #eee;
-    }
-    media-controller, video {
-      max-width: 960px;
-      width: 100%;
-      background: #000;
-    }
-    media-time-range,
-    media-volume-range {
-      --media-range-track-height: 4px;
-    }
-    #log {
-      font-size: 0.75rem;
-      max-width: 960px;
-      margin-top: 1rem;
-      line-height: 1.3;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      white-space: pre-wrap;
-    }
-    #log .err { color: #ff6b6b; }
+    body { font-family: system-ui, Arial, sans-serif; margin: 1rem; }
+    media-controller, video { max-width: 800px; width: 100%; }
+    #status { font: 12px/1.4 ui-monospace, monospace; margin-top: .75rem; }
+    #progress { display:inline-block; width:140px; height:6px; background:#ddd; vertical-align:middle; margin-left:6px; border-radius:3px; overflow:hidden; }
+    #bar { height:100%; width:0; background:#4caf50; transition:width .3s; }
   </style>
 </head>
 <body>
+  <h1>WebTorrent + Media Chrome</h1>
 
-  <h1>WebTorrent + Modern Player (Media Chrome)</h1>
+  <!-- Media Chrome player -->
+  <media-controller id="mc">
+    <video id="player" slot="media" playsinline crossorigin controls></video>
 
-  <!-- Player UI (Media Chrome wraps a native <video>) -->
-  <media-controller id="controller" autoplay="false">
-    <!-- Your actual video element that WebTorrent will stream into -->
-    <video id="player" slot="media" playsinline></video>
+    <!-- Center loading indicator -->
+    <media-loading-indicator slot="centered-chrome"></media-loading-indicator>
 
-    <!-- Top controls (optional) -->
-    <media-control-bar slot="top-chrome">
-      <media-title></media-title>
-      <media-live-button></media-live-button>
-    </media-control-bar>
-
-    <!-- Center play button overlay -->
-    <media-center-controls>
-      <media-play-button></media-play-button>
-    </media-center-controls>
-
-    <!-- Main control bar -->
+    <!-- Control bar -->
     <media-control-bar>
       <media-play-button></media-play-button>
       <media-seek-backward-button seconds="10"></media-seek-backward-button>
       <media-seek-forward-button seconds="10"></media-seek-forward-button>
       <media-time-range></media-time-range>
-      <media-time-display show-duration remaining></media-time-display>
-      <media-volume-range></media-volume-range>
+      <media-time-display show-duration></media-time-display>
       <media-mute-button></media-mute-button>
-      <media-captions-button></media-captions-button>
-      <media-playback-rate-button></media-playback-rate-button>
+      <media-volume-range></media-volume-range>
       <media-fullscreen-button></media-fullscreen-button>
     </media-control-bar>
-
-    <!-- Loading indicator -->
-    <media-loading-indicator slot="centered-chrome"></media-loading-indicator>
   </media-controller>
 
-  <div id="log"></div>
+  <div id="status">
+    <span id="msg">Initializing…</span>
+    <span id="progress"><span id="bar"></span></span>
+  </div>
 
   <script>
-    // --- WebTorrent logic (unchanged in spirit) ---
     const client = new WebTorrent();
 
     const torrentId =
       'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=udp%3A%2F%2Fexplodie.org%3A6969&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.empire-js.us%3A1337&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.fastcast.nz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&ws=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2F&xs=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2Fsintel.torrent';
 
     const videoEl = document.getElementById('player');
-    const logEl   = document.getElementById('log');
-    const controller = document.getElementById('controller');
+    const msgEl = document.getElementById('msg');
+    const barEl = document.getElementById('bar');
 
-    function log(msg, err = false) {
-      const line = document.createElement('div');
-      if (err) line.classList.add('err');
-      line.textContent = msg;
-      logEl.appendChild(line);
-    }
+    client.on('error', err => {
+      console.error(err);
+      msgEl.textContent = 'Error: ' + err.message;
+    });
 
-    client.on('error', e => log('Client error: ' + e.message, true));
+    msgEl.textContent = 'Adding torrent…';
 
     client.add(torrentId, torrent => {
-      log('Metadata received: ' + torrent.name);
+      msgEl.textContent = 'Metadata received: ' + torrent.name;
 
-      // Update the visible title (optional)
-      controller.setAttribute('media-title', torrent.name);
-
-      const file = torrent.files.find(f => f.name.toLowerCase().endsWith('.mp4'))
-               || torrent.files.find(f => /\.(webm|m4v|ogg)$/i.test(f.name))
-               || torrent.files[0];
-
+      // Choose first .mp4
+      const file = torrent.files.find(f => f.name.endsWith('.mp4')) || torrent.files[0];
       if (!file) {
-        log('No playable video file found in torrent.', true);
+        msgEl.textContent = 'No playable file in torrent.';
         return;
       }
 
-      // Stream into existing <video> element
-      file.renderTo(videoEl, { autoplay: false, muted: true }, () => {
-        log('Video element is ready to play.');
+      // Stream into existing <video> (progressive, not full pre-download)
+      file.renderTo(videoEl, { autoplay: false }, () => {
+        console.log('Ready to play!');
+        msgEl.textContent = 'Streaming: ' + file.name;
       });
 
-      // (Optional) Log segment / range requests from the player
-      file.on('stream', ({ req }) => {
-        if (req.destination === 'video') {
-          log('Range requested: ' + (req.headers.range || 'full file'));
-        }
-      });
+      // Update status
+      function update() {
+        const pct = (torrent.progress * 100) || 0;
+        barEl.style.width = pct.toFixed(2) + '%';
+        msgEl.textContent =
+          `${torrent.numPeers} peer${torrent.numPeers===1?'':'s'} | ${pct.toFixed(1)}% | ↓ ${pretty(torrent.downloadSpeed)}/s ↑ ${pretty(torrent.uploadSpeed)}/s` +
+          (torrent.done ? ' | Seeding' : '');
+      }
 
-      torrent.on('download', bytes => {
-        log('Downloaded piece: ' + bytes + ' bytes (progress '
-            + (torrent.progress * 100).toFixed(2) + '%)');
-      });
+      torrent.on('download', update);
+      torrent.on('upload', update);
+      torrent.on('wire', update);
+      torrent.on('done', update);
 
-      torrent.on('done', () => {
-        log('Download complete. Seeding...');
-      });
+      // Poll for smoother UI
+      const interval = setInterval(() => {
+        if (torrent.done) { clearInterval(interval); }
+        update();
+      }, 750);
+      update();
     });
+
+    function pretty(bytes) {
+      if (!bytes) return '0 B';
+      const units = ['B','kB','MB','GB','TB'];
+      const e = Math.min(Math.floor(Math.log(bytes)/Math.log(1000)), units.length-1);
+      return (bytes / Math.pow(1000,e)).toFixed(2) + ' ' + units[e];
+    }
   </script>
 </body>
 </html>
