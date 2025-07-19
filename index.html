@@ -2,24 +2,30 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>WebTorrent + Plyr (Minimal)</title>
+<title>WebTorrent Minimal Player</title>
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.1.0/plyr.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.1.0/plyr.min.js"></script>
 <style>
-  body { font-family: system-ui, sans-serif; margin:1rem; }
-  video { width:100%; max-width:640px; background:#000; }
+  body { font-family: system-ui, sans-serif; margin: 1rem; }
+  video { width: 100%; max-width: 640px; background:#000; }
 </style>
 </head>
 <body>
-<video id="player" controls playsinline></video>
+<video id="video" controls autoplay playsinline></video>
 
 <script>
+/*
+  Trimmed magnet: only WSS trackers that commonly work in browsers.
+  (You can add more wss:// trackers if needed.)
+*/
 const magnet = 'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10'
   + '&dn=Sintel'
   + '&tr=wss://tracker.openwebtorrent.com'
   + '&tr=wss://tracker.webtorrent.dev';
 
+/*
+  Custom rtcConfig: remove Twilio entry that caused your RTCPeerConnection error.
+  (Add more STUN servers if you like.)
+*/
 const client = new WebTorrent({
   tracker: {
     rtcConfig: {
@@ -31,17 +37,16 @@ const client = new WebTorrent({
   }
 });
 
-// Initialize Plyr on the existing <video>
-const plyrInstance = new Plyr('#player', { debug: false });
+const videoEl = document.getElementById('video');
 
 client.add(magnet, torrent => {
   const file = torrent.files.find(f => f.name.endsWith('.mp4')) || torrent.files[0];
-  if (!file) return console.error('No playable file found.');
+  if (!file) return console.error('No playable file found in torrent.');
 
-  // Render directly into the real <video> element (Plyr keeps working)
-  file.renderTo(plyrInstance.media, { autoplay: true }, err => {
+  // Stream directly into existing <video>
+  file.renderTo(videoEl, { autoplay: true }, err => {
     if (err) return console.error(err);
-    console.log('Streaming via Plyr.');
+    console.log('Streaming started.');
   });
 });
 
