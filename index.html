@@ -2,13 +2,12 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>M3U Live Player with Channel List</title>
+    <title>M3U Live Player - GitHub Pages</title>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest"></script>
 
     <style>
-      /* Your existing styles... */
       body {
         font-family: Arial, sans-serif;
         margin: 0;
@@ -93,6 +92,15 @@
       body.sidebar-collapsed #sidebar { width: 0; padding: 0; border-right: none; }
       body.sidebar-collapsed #sidebar-inner { display: none; }
       body.sidebar-collapsed #player video { width: 98%; height: 98%; }
+      .error-message {
+        color: #ff6b6b;
+        padding: 20px;
+        text-align: center;
+        background: rgba(255, 107, 107, 0.1);
+        border: 1px solid #ff6b6b;
+        border-radius: 4px;
+        margin: 10px;
+      }
     </style>
   </head>
   <body>
@@ -110,11 +118,37 @@
     </div>
 
     <script>
-      // GitHub Pages-friendly CORS proxy
-      const CORS_PROXY = "https://cors.isomorphic-git.org/";
+      // Multiple CORS proxy options for GitHub Pages
+      const CORS_PROXIES = [
+        "https://cors.isomorphic-git.org/",
+        "https://api.allorigins.win/raw?url=",
+        "https://thingproxy.freeboard.io/fetch/"
+      ];
 
-      function proxiedUrl(url) {
-        return CORS_PROXY + url;
+      function getProxiedUrl(url, proxyIndex = 0) {
+        if (proxyIndex >= CORS_PROXIES.length) return url;
+        return CORS_PROXIES[proxyIndex] + encodeURIComponent(url);
+      }
+
+      async function fetchWithProxies(url, maxAttempts = 3) {
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          for (let proxyIdx = 0; proxyIdx < CORS_PROXIES.length; proxyIdx++) {
+            try {
+              const proxiedUrl = getProxiedUrl(url, proxyIdx);
+              console.log(`Attempting fetch (attempt ${attempt + 1}, proxy ${proxyIdx + 1}):`, proxiedUrl);
+              
+              const res = await fetch(proxiedUrl);
+              if (res.ok) {
+                console.log("Fetch successful with proxy:", proxyIdx + 1);
+                return await res.text();
+              }
+            } catch (e) {
+              console.warn(`Proxy ${proxyIdx + 1} failed:`, e.message);
+              continue;
+            }
+          }
+        }
+        throw new Error("All proxies failed");
       }
 
       let hlsInstance = null;
@@ -123,10 +157,17 @@
 
       async function playStream(url) {
         const video = document.getElementById("video");
+        const errorDiv = document.getElementById("channels");
 
         // Clean up previous players
-        if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
-        if (tsPlayer) { tsPlayer.destroy(); tsPlayer = null; }
+        if (hlsInstance) { 
+          hlsInstance.destroy(); 
+          hlsInstance = null; 
+        }
+        if (tsPlayer) { 
+          tsPlayer.destroy(); 
+          tsPlayer = null; 
+        }
 
         video.onended = null;
 
@@ -134,65 +175,126 @@
         const isM3U8 = lower.includes(".m3u8");
         const isTS = lower.endsWith(".ts");
 
-        // Case 1: HLS
-        if (isM3U8 && Hls.isSupported()) {
+        // Case 1: TS streams (more reliable on GitHub Pages)
+        if (isTS && window.mpegts && mpegts.isSupported()) {
+          console.log("Playing TS stream via proxies:", url);
+          
           try {
-            console.log("Playing HLS via CORS proxy:", url);
+            const proxiedUrl = getProxiedUrl(url);
+            console.log("Proxied TS URL:", proxiedUrl);
 
+            tsPlayer = mpegts.createPlayer(
+              {
+                type: "mpegts",
+                url: proxiedUrl,
+                isLive: true,
+              },
+              {
+                enableWorker: true,
+                enableStashBuffer: true,
+                stashInitialSize: 256 * 1024,
+              }
+            );
+
+            tsPlayer.attachMediaElement(video);
+            tsPlayer.load();
+            tsPlayer.play().catch(e => console.log("Play failed:", e));
+
+            tsPlayer.on(mpegts.Events.ERROR, (type, details, info) => {
+              console.warn("mpegts error:", type, details, info || "");
+            });
+
+            return;
+          } catch (e) {
+            console.error("TS stream failed:", e);
+          }
+        }
+
+        // Case 2: HLS streams - try direct first, then with CORS
+        if (isM3U8 && Hls.isSupported()) {
+          console.log("Attempting HLS stream:", url);
+
+          // Try direct first
+          try {
             hlsInstance = new Hls({
               liveDurationInfinity: true,
               enableWorker: true,
+              xhrSetup: function(xhr) {
+                // Try to set proper headers for CORS
+                xhr.setRequestHeader('Accept', '*/*');
+              }
             });
-            hlsInstance.loadSource(proxiedUrl(url));
+            
+            hlsInstance.loadSource(url);
             hlsInstance.attachMedia(video);
+            
             hlsInstance.on(Hls.Events.MEDIA_ATTACHED, () => {
               video.play().catch(() => {});
             });
+
+            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+              console.warn("HLS error:", data);
+              
+              // If direct fails, try with CORS proxy
+              if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                console.log("Direct HLS failed, trying with CORS proxy...");
+                
+                if (hlsInstance) {
+                  hlsInstance.destroy();
+                  hlsInstance = null;
+                }
+                
+                tryProxyHLS(url, video);
+              }
+            });
+
+            return;
           } catch (e) {
-            console.error("Error loading HLS stream:", e);
+            console.error("Direct HLS failed:", e);
           }
-          return;
         }
 
-        // Case 2: TS streams
-        if (isTS && window.mpegts && mpegts.isSupported()) {
-          console.log("Playing MPEG-TS via CORS proxy:", url);
-
-          tsPlayer = mpegts.createPlayer(
-            {
-              type: "mpegts",
-              url: proxiedUrl(url),
-              isLive: true,
-            },
-            {
-              enableWorker: true,
-              enableStashBuffer: true,
-              stashInitialSize: 256 * 1024,
-            }
-          );
-
-          tsPlayer.attachMediaElement(video);
-          tsPlayer.load();
-          tsPlayer.play().catch(() => {});
-
-          tsPlayer.on(mpegts.Events.ERROR, (type, details, info) => {
-            console.warn("mpegts error:", type, details, info || "");
-          });
-
-          video.onended = () => {
-            console.warn("Stream ended. Server may have closed connection.");
-          };
-
-          return;
+        // Fallback for other formats
+        try {
+          const proxiedUrl = getProxiedUrl(url);
+          console.log("Playing fallback via proxy:", proxiedUrl);
+          video.src = proxiedUrl;
+          video.play().catch(() => {});
+        } catch (e) {
+          console.error("All playback methods failed:", e);
+          errorDiv.innerHTML = '<div class="error-message">Unable to load stream. This may be due to CORS restrictions or the stream being offline.</div>';
         }
-
-        // Fallback
-        console.log("Playing direct stream (fallback):", url);
-        video.src = proxiedUrl(url);
-        video.play().catch(() => {});
       }
 
-      // Your existing playlist loading and UI code...
+      async function tryProxyHLS(url, video) {
+        try {
+          const playlistText = await fetchWithProxies(url);
+          console.log("Fetched HLS playlist via proxy");
+          
+          // Simple approach: just try to play the playlist directly via proxy
+          // without rewriting - this often works better
+          const proxiedUrl = getProxiedUrl(url);
+          
+          hlsInstance = new Hls({
+            liveDurationInfinity: true,
+            enableWorker: true,
+          });
+          
+          hlsInstance.loadSource(proxiedUrl);
+          hlsInstance.attachMedia(video);
+          
+          hlsInstance.on(Hls.Events.MEDIA_ATTACHED, () => {
+            video.play().catch(() => {});
+          });
+          
+        } catch (e) {
+          console.error("Proxy HLS also failed:", e);
+          document.getElementById("channels").innerHTML = 
+            '<div class="error-message">Unable to load HLS stream. The server may not support CORS for GitHub Pages.</div>';
+        }
+      }
+
+      // Playlist loading functions...
       async function fetchPlaylistText() {
         const candidates = ["lista.m3u8", "lista.m3u"];
         for (const filename of candidates) {
@@ -240,12 +342,22 @@
             }
           }
 
+          // Sort TS streams first (they usually work better on GitHub Pages)
+          channels.sort((a, b) => {
+            const aIsTS = a.url.toLowerCase().endsWith('.ts');
+            const bIsTS = b.url.toLowerCase().endsWith('.ts');
+            if (aIsTS && !bIsTS) return -1;
+            if (!aIsTS && bIsTS) return 1;
+            return 0;
+          });
+
           allChannels = channels;
           renderChannelList(allChannels);
           if (channels.length > 0) playStream(channels[0].url);
         } catch (e) {
           console.error("Error loading playlist:", e);
-          document.getElementById("channels").textContent = "Error loading playlist";
+          document.getElementById("channels").innerHTML = 
+            '<div class="error-message">Error loading playlist file.</div>';
         }
       }
 
@@ -254,7 +366,7 @@
         div.innerHTML = "";
 
         if (channels.length === 0) {
-          div.textContent = "No channels found.";
+          div.innerHTML = '<div class="error-message">No channels found.</div>';
           return;
         }
 
