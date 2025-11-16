@@ -4,12 +4,11 @@
     <meta charset="utf-8" />
     <title>M3U Live Player with Channel List</title>
 
-    <!-- HLS.js for .m3u8 -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <!-- mpegts.js for .ts MPEG-TS streams -->
     <script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest"></script>
 
     <style>
+      /* Your existing styles... */
       body {
         font-family: Arial, sans-serif;
         margin: 0;
@@ -18,15 +17,7 @@
         overflow: hidden;
         background: #000;
       }
-
-      /* Container for sidebar + player */
-      #layout {
-        display: flex;
-        flex: 1;
-        height: 100%;
-      }
-
-      /* Sidebar */
+      #layout { display: flex; flex: 1; height: 100%; }
       #sidebar {
         width: 300px;
         display: flex;
@@ -34,16 +25,9 @@
         border-right: 2px solid #444;
         background: #111;
         color: #eee;
-        transition: width 0.3s ease, padding 0.3s ease,
-          border-right 0.3s ease;
+        transition: width 0.3s ease, padding 0.3s ease, border-right 0.3s ease;
       }
-
-      #sidebar-inner {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-      }
-
+      #sidebar-inner { display: flex; flex-direction: column; height: 100%; }
       #search {
         margin: 10px;
         padding: 6px 8px;
@@ -53,17 +37,8 @@
         color: #eee;
         outline: none;
       }
-
-      #search::placeholder {
-        color: #888;
-      }
-
-      #channels {
-        flex: 1;
-        overflow-y: auto;
-        padding: 10px;
-      }
-
+      #search::placeholder { color: #888; }
+      #channels { flex: 1; overflow-y: auto; padding: 10px; }
       .channel {
         padding: 6px 8px;
         margin-bottom: 5px;
@@ -74,11 +49,7 @@
         align-items: center;
         gap: 8px;
       }
-
-      .channel:hover {
-        background: #333;
-      }
-
+      .channel:hover { background: #333; }
       .channel img {
         width: 32px;
         height: 32px;
@@ -87,22 +58,9 @@
         border-radius: 4px;
         flex-shrink: 0;
       }
-
-      .channel-text {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .channel-name {
-        font-size: 14px;
-      }
-
-      .channel-group {
-        font-size: 11px;
-        color: #aaa;
-      }
-
-      /* Player */
+      .channel-text { display: flex; flex-direction: column; }
+      .channel-name { font-size: 14px; }
+      .channel-group { font-size: 11px; color: #aaa; }
       #player {
         flex: 1;
         background: #000;
@@ -112,15 +70,12 @@
         transition: all 0.3s ease;
         position: relative;
       }
-
       video {
         width: 90%;
         height: auto;
         background: black;
         transition: width 0.3s ease, height 0.3s ease;
       }
-
-      /* Sidebar collapse toggle button (always visible) */
       #toggleSidebar {
         position: absolute;
         top: 10px;
@@ -134,44 +89,20 @@
         color: #eee;
         cursor: pointer;
       }
-
-      #toggleSidebar:hover {
-        background: rgba(50, 50, 50, 0.9);
-      }
-
-      /* Collapsed state */
-      body.sidebar-collapsed #sidebar {
-        width: 0;
-        padding: 0;
-        border-right: none;
-      }
-
-      body.sidebar-collapsed #sidebar-inner {
-        display: none;
-      }
-
-      body.sidebar-collapsed #player video {
-        width: 98%;
-        height: 98%;
-      }
+      #toggleSidebar:hover { background: rgba(50, 50, 50, 0.9); }
+      body.sidebar-collapsed #sidebar { width: 0; padding: 0; border-right: none; }
+      body.sidebar-collapsed #sidebar-inner { display: none; }
+      body.sidebar-collapsed #player video { width: 98%; height: 98%; }
     </style>
   </head>
-
   <body>
     <div id="layout">
-      <!-- Sidebar -->
       <div id="sidebar">
         <div id="sidebar-inner">
-          <input
-            id="search"
-            type="text"
-            placeholder="Search channels..."
-          />
+          <input id="search" type="text" placeholder="Search channels..." />
           <div id="channels">Loading channels…</div>
         </div>
       </div>
-
-      <!-- Player -->
       <div id="player">
         <button id="toggleSidebar">Hide channels</button>
         <video id="video" controls></video>
@@ -179,7 +110,12 @@
     </div>
 
     <script>
-      // No proxy at all – URLs are used directly.
+      // GitHub Pages-friendly CORS proxy
+      const CORS_PROXY = "https://cors.isomorphic-git.org/";
+
+      function proxiedUrl(url) {
+        return CORS_PROXY + url;
+      }
 
       let hlsInstance = null;
       let tsPlayer = null;
@@ -189,14 +125,8 @@
         const video = document.getElementById("video");
 
         // Clean up previous players
-        if (hlsInstance) {
-          hlsInstance.destroy();
-          hlsInstance = null;
-        }
-        if (tsPlayer) {
-          tsPlayer.destroy();
-          tsPlayer = null;
-        }
+        if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+        if (tsPlayer) { tsPlayer.destroy(); tsPlayer = null; }
 
         video.onended = null;
 
@@ -204,16 +134,16 @@
         const isM3U8 = lower.includes(".m3u8");
         const isTS = lower.endsWith(".ts");
 
-        // --- Case 1: HLS playlist (.m3u8) ---
+        // Case 1: HLS
         if (isM3U8 && Hls.isSupported()) {
           try {
-            console.log("Playing HLS playlist directly:", url);
+            console.log("Playing HLS via CORS proxy:", url);
 
             hlsInstance = new Hls({
               liveDurationInfinity: true,
               enableWorker: true,
             });
-            hlsInstance.loadSource(url);
+            hlsInstance.loadSource(proxiedUrl(url));
             hlsInstance.attachMedia(video);
             hlsInstance.on(Hls.Events.MEDIA_ATTACHED, () => {
               video.play().catch(() => {});
@@ -224,14 +154,14 @@
           return;
         }
 
-        // --- Case 2: raw MPEG-TS (.ts) via mpegts.js (live) ---
+        // Case 2: TS streams
         if (isTS && window.mpegts && mpegts.isSupported()) {
-          console.log("Playing MPEG-TS via mpegts.js (live):", url);
+          console.log("Playing MPEG-TS via CORS proxy:", url);
 
           tsPlayer = mpegts.createPlayer(
             {
               type: "mpegts",
-              url: url,
+              url: proxiedUrl(url),
               isLive: true,
             },
             {
@@ -250,22 +180,19 @@
           });
 
           video.onended = () => {
-            console.warn(
-              "Stream ended (connection closed). If it is a true live " +
-                "stream, the server should keep sending data."
-            );
+            console.warn("Stream ended. Server may have closed connection.");
           };
 
           return;
         }
 
-        // --- Case 3: fallback (mp4, etc.) ---
+        // Fallback
         console.log("Playing direct stream (fallback):", url);
-        video.src = url;
+        video.src = proxiedUrl(url);
         video.play().catch(() => {});
       }
 
-      // Try lista.m3u8, then lista.m3u
+      // Your existing playlist loading and UI code...
       async function fetchPlaylistText() {
         const candidates = ["lista.m3u8", "lista.m3u"];
         for (const filename of candidates) {
@@ -275,28 +202,18 @@
               console.log("Loaded playlist:", filename);
               return await res.text();
             }
-          } catch (e) {
-            // try next
-          }
+          } catch (e) { /* try next */ }
         }
-        throw new Error(
-          "No playlist file found (lista.m3u8 or lista.m3u)"
-        );
+        throw new Error("No playlist file found");
       }
 
       function parseExtInf(line) {
         const comma = line.lastIndexOf(",");
-        const name =
-          comma !== -1
-            ? line.substring(comma + 1).trim()
-            : "Unnamed channel";
-
+        const name = comma !== -1 ? line.substring(comma + 1).trim() : "Unnamed channel";
         const logoMatch = line.match(/tvg-logo="([^"]*)"/i);
         const logo = logoMatch ? logoMatch[1] : "";
-
         const groupMatch = line.match(/group-title="([^"]*)"/i);
         const group = groupMatch ? groupMatch[1] : "";
-
         return { name, logo, group };
       }
 
@@ -304,7 +221,6 @@
         try {
           const text = await fetchPlaylistText();
           const lines = text.split(/\r?\n/);
-
           const channels = [];
           let currentMeta = { name: "", logo: "", group: "" };
 
@@ -314,10 +230,7 @@
 
             if (line.startsWith("#EXTINF")) {
               currentMeta = parseExtInf(line);
-            } else if (
-              line.startsWith("http://") ||
-              line.startsWith("https://")
-            ) {
+            } else if (line.startsWith("http://") || line.startsWith("https://")) {
               channels.push({
                 name: currentMeta.name,
                 logo: currentMeta.logo,
@@ -329,14 +242,10 @@
 
           allChannels = channels;
           renderChannelList(allChannels);
-
-          if (channels.length > 0) {
-            playStream(channels[0].url);
-          }
+          if (channels.length > 0) playStream(channels[0].url);
         } catch (e) {
           console.error("Error loading playlist:", e);
-          document.getElementById("channels").textContent =
-            "Error loading lista.m3u8/lista.m3";
+          document.getElementById("channels").textContent = "Error loading playlist";
         }
       }
 
@@ -349,7 +258,7 @@
           return;
         }
 
-        channels.forEach((ch) => {
+        channels.forEach(ch => {
           const item = document.createElement("div");
           item.className = "channel";
           item.onclick = () => playStream(ch.url);
@@ -358,6 +267,7 @@
             const img = document.createElement("img");
             img.src = ch.logo;
             img.alt = ch.name;
+            img.onerror = () => { img.style.display = "none"; };
             item.appendChild(img);
           }
 
@@ -385,15 +295,13 @@
         const input = document.getElementById("search");
         input.addEventListener("input", () => {
           const q = input.value.toLowerCase().trim();
-          if (!q) {
-            renderChannelList(allChannels);
-            return;
-          }
-          const filtered = allChannels.filter((ch) => {
-            const name = (ch.name || "").toLowerCase();
-            const group = (ch.group || "").toLowerCase();
-            return name.includes(q) || group.includes(q);
-          });
+          const filtered = q 
+            ? allChannels.filter(ch => {
+                const name = (ch.name || "").toLowerCase();
+                const group = (ch.group || "").toLowerCase();
+                return name.includes(q) || group.includes(q);
+              })
+            : allChannels;
           renderChannelList(filtered);
         });
       }
@@ -401,9 +309,7 @@
       function setupSidebarToggle() {
         const btn = document.getElementById("toggleSidebar");
         btn.addEventListener("click", () => {
-          const collapsed = document.body.classList.toggle(
-            "sidebar-collapsed"
-          );
+          const collapsed = document.body.classList.toggle("sidebar-collapsed");
           btn.textContent = collapsed ? "Show channels" : "Hide channels";
         });
       }
