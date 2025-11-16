@@ -1,435 +1,452 @@
 <!DOCTYPE html>
 <html>
-  <head>
+<head>
     <meta charset="utf-8" />
     <title>M3U Live Player - GitHub Pages</title>
-
+    
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest"></script>
 
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        height: 100vh;
-        display: flex;
-        overflow: hidden;
-        background: #000;
-      }
-      #layout { display: flex; flex: 1; height: 100%; }
-      #sidebar {
-        width: 300px;
-        display: flex;
-        flex-direction: column;
-        border-right: 2px solid #444;
-        background: #111;
-        color: #eee;
-        transition: width 0.3s ease, padding 0.3s ease, border-right 0.3s ease;
-      }
-      #sidebar-inner { display: flex; flex-direction: column; height: 100%; }
-      #search {
-        margin: 10px;
-        padding: 6px 8px;
-        border-radius: 4px;
-        border: 1px solid #444;
-        background: #222;
-        color: #eee;
-        outline: none;
-      }
-      #search::placeholder { color: #888; }
-      #channels { flex: 1; overflow-y: auto; padding: 10px; }
-      .channel {
-        padding: 6px 8px;
-        margin-bottom: 5px;
-        cursor: pointer;
-        background: #222;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .channel:hover { background: #333; }
-      .channel img {
-        width: 32px;
-        height: 32px;
-        object-fit: contain;
-        background: #000;
-        border-radius: 4px;
-        flex-shrink: 0;
-      }
-      .channel-text { display: flex; flex-direction: column; }
-      .channel-name { font-size: 14px; }
-      .channel-group { font-size: 11px; color: #aaa; }
-      #player {
-        flex: 1;
-        background: #000;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        transition: all 0.3s ease;
-        position: relative;
-      }
-      video {
-        width: 90%;
-        height: auto;
-        background: black;
-        transition: width 0.3s ease, height 0.3s ease;
-      }
-      #toggleSidebar {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 10;
-        padding: 5px 10px;
-        font-size: 12px;
-        border-radius: 4px;
-        border: 1px solid #444;
-        background: rgba(0, 0, 0, 0.7);
-        color: #eee;
-        cursor: pointer;
-      }
-      #toggleSidebar:hover { background: rgba(50, 50, 50, 0.9); }
-      body.sidebar-collapsed #sidebar { width: 0; padding: 0; border-right: none; }
-      body.sidebar-collapsed #sidebar-inner { display: none; }
-      body.sidebar-collapsed #player video { width: 98%; height: 98%; }
-      .error-message {
-        color: #ff6b6b;
-        padding: 20px;
-        text-align: center;
-        background: rgba(255, 107, 107, 0.1);
-        border: 1px solid #ff6b6b;
-        border-radius: 4px;
-        margin: 10px;
-      }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            background: #000;
+        }
+        #layout { display: flex; flex: 1; height: 100%; }
+        #sidebar {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #444;
+            background: #111;
+            color: #eee;
+            transition: width 0.3s ease, padding 0.3s ease, border-right 0.3s ease;
+        }
+        #sidebar-inner { display: flex; flex-direction: column; height: 100%; }
+        #search {
+            margin: 10px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #222;
+            color: #eee;
+            outline: none;
+        }
+        #search::placeholder { color: #888; }
+        #channels { flex: 1; overflow-y: auto; padding: 10px; }
+        .channel {
+            padding: 6px 8px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            background: #222;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .channel:hover { background: #333; }
+        .channel img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            background: #000;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .channel-text { display: flex; flex-direction: column; }
+        .channel-name { font-size: 14px; }
+        .channel-group { font-size: 11px; color: #aaa; }
+        #player {
+            flex: 1;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        video {
+            width: 90%;
+            height: auto;
+            background: black;
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+        #toggleSidebar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: rgba(0, 0, 0, 0.7);
+            color: #eee;
+            cursor: pointer;
+        }
+        #toggleSidebar:hover { background: rgba(50, 50, 50, 0.9); }
+        body.sidebar-collapsed #sidebar { width: 0; padding: 0; border-right: none; }
+        body.sidebar-collapsed #sidebar-inner { display: none; }
+        body.sidebar-collapsed #player video { width: 98%; height: 98%; }
+        .error-message {
+            color: #ff6b6b;
+            padding: 20px;
+            text-align: center;
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid #ff6b6b;
+            border-radius: 4px;
+            margin: 10px;
+        }
+        .stream-info {
+            color: #4CAF50;
+            padding: 10px;
+            text-align: center;
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4CAF50;
+            border-radius: 4px;
+            margin: 10px;
+            font-size: 12px;
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div id="layout">
-      <div id="sidebar">
-        <div id="sidebar-inner">
-          <input id="search" type="text" placeholder="Search channels..." />
-          <div id="channels">Loading channels…</div>
+        <div id="sidebar">
+            <div id="sidebar-inner">
+                <input id="search" type="text" placeholder="Search channels..." />
+                <div id="channels">Loading channels…</div>
+            </div>
         </div>
-      </div>
-      <div id="player">
-        <button id="toggleSidebar">Hide channels</button>
-        <video id="video" controls></video>
-      </div>
+        <div id="player">
+            <button id="toggleSidebar">Hide channels</button>
+            <video id="video" controls preload="none"></video>
+        </div>
     </div>
 
     <script>
-      // Multiple CORS proxy options for GitHub Pages
-      const CORS_PROXIES = [
-        "https://cors.isomorphic-git.org/",
-        "https://api.allorigins.win/raw?url=",
-        "https://thingproxy.freeboard.io/fetch/"
-      ];
+        // More reliable CORS proxies for streaming
+        const CORS_PROXIES = [
+            "https://api.codetabs.com/v1/proxy?quest=",
+            "https://cors.isomorphic-git.org/",
+            "https://thingproxy.freeboard.io/fetch/"
+        ];
 
-      function getProxiedUrl(url, proxyIndex = 0) {
-        if (proxyIndex >= CORS_PROXIES.length) return url;
-        return CORS_PROXIES[proxyIndex] + encodeURIComponent(url);
-      }
-
-      async function fetchWithProxies(url, maxAttempts = 3) {
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          for (let proxyIdx = 0; proxyIdx < CORS_PROXIES.length; proxyIdx++) {
-            try {
-              const proxiedUrl = getProxiedUrl(url, proxyIdx);
-              console.log(`Attempting fetch (attempt ${attempt + 1}, proxy ${proxyIdx + 1}):`, proxiedUrl);
-              
-              const res = await fetch(proxiedUrl);
-              if (res.ok) {
-                console.log("Fetch successful with proxy:", proxyIdx + 1);
-                return await res.text();
-              }
-            } catch (e) {
-              console.warn(`Proxy ${proxyIdx + 1} failed:`, e.message);
-              continue;
+        function getProxiedUrl(url, proxyIndex = 0) {
+            if (proxyIndex >= CORS_PROXIES.length) return url;
+            const proxy = CORS_PROXIES[proxyIndex];
+            // Handle different proxy formats
+            if (proxy.includes("codetabs.com")) {
+                return proxy + encodeURIComponent(url);
             }
-          }
-        }
-        throw new Error("All proxies failed");
-      }
-
-      let hlsInstance = null;
-      let tsPlayer = null;
-      let allChannels = [];
-
-      async function playStream(url) {
-        const video = document.getElementById("video");
-        const errorDiv = document.getElementById("channels");
-
-        // Clean up previous players
-        if (hlsInstance) { 
-          hlsInstance.destroy(); 
-          hlsInstance = null; 
-        }
-        if (tsPlayer) { 
-          tsPlayer.destroy(); 
-          tsPlayer = null; 
+            return proxy + url;
         }
 
-        video.onended = null;
+        let hlsInstance = null;
+        let tsPlayer = null;
+        let allChannels = [];
+        let currentProxyIndex = 0;
 
-        const lower = url.toLowerCase();
-        const isM3U8 = lower.includes(".m3u8");
-        const isTS = lower.endsWith(".ts");
-
-        // Case 1: TS streams (more reliable on GitHub Pages)
-        if (isTS && window.mpegts && mpegts.isSupported()) {
-          console.log("Playing TS stream via proxies:", url);
-          
-          try {
-            const proxiedUrl = getProxiedUrl(url);
-            console.log("Proxied TS URL:", proxiedUrl);
-
-            tsPlayer = mpegts.createPlayer(
-              {
-                type: "mpegts",
-                url: proxiedUrl,
-                isLive: true,
-              },
-              {
-                enableWorker: true,
-                enableStashBuffer: true,
-                stashInitialSize: 256 * 1024,
-              }
-            );
-
-            tsPlayer.attachMediaElement(video);
-            tsPlayer.load();
-            tsPlayer.play().catch(e => console.log("Play failed:", e));
-
-            tsPlayer.on(mpegts.Events.ERROR, (type, details, info) => {
-              console.warn("mpegts error:", type, details, info || "");
-            });
-
-            return;
-          } catch (e) {
-            console.error("TS stream failed:", e);
-          }
+        async function testProxyAvailability(url) {
+            console.log("Testing proxy availability for:", url);
+            for (let i = 0; i < CORS_PROXIES.length; i++) {
+                try {
+                    const testUrl = getProxiedUrl(url, i);
+                    console.log(`Testing proxy ${i + 1}:`, testUrl);
+                    
+                    const response = await fetch(testUrl, {
+                        method: 'HEAD',
+                        mode: 'cors'
+                    });
+                    
+                    if (response.ok || response.status === 200) {
+                        console.log(`Proxy ${i + 1} works!`);
+                        return i;
+                    }
+                } catch (e) {
+                    console.warn(`Proxy ${i + 1} failed:`, e.message);
+                }
+            }
+            return -1;
         }
 
-        // Case 2: HLS streams - try direct first, then with CORS
-        if (isM3U8 && Hls.isSupported()) {
-          console.log("Attempting HLS stream:", url);
-
-          // Try direct first
-          try {
-            hlsInstance = new Hls({
-              liveDurationInfinity: true,
-              enableWorker: true,
-              xhrSetup: function(xhr) {
-                // Try to set proper headers for CORS
-                xhr.setRequestHeader('Accept', '*/*');
-              }
-            });
+        async function playStream(url) {
+            const video = document.getElementById("video");
+            const errorDiv = document.getElementById("channels");
             
-            hlsInstance.loadSource(url);
-            hlsInstance.attachMedia(video);
-            
-            hlsInstance.on(Hls.Events.MEDIA_ATTACHED, () => {
-              video.play().catch(() => {});
-            });
+            // Clear any existing info messages
+            const existingInfo = document.querySelector('.stream-info');
+            if (existingInfo) existingInfo.remove();
 
-            hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-              console.warn("HLS error:", data);
-              
-              // If direct fails, try with CORS proxy
-              if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                console.log("Direct HLS failed, trying with CORS proxy...");
+            // Clean up previous players
+            if (hlsInstance) { 
+                hlsInstance.destroy(); 
+                hlsInstance = null; 
+            }
+            if (tsPlayer) { 
+                tsPlayer.destroy(); 
+                tsPlayer = null; 
+            }
+
+            video.onended = null;
+            video.src = ''; // Clear previous source
+
+            const lower = url.toLowerCase();
+            const isM3U8 = lower.includes(".m3u8");
+            const isTS = lower.endsWith(".ts");
+
+            console.log("Attempting to play:", { url, isM3U8, isTS });
+
+            // Try different approaches based on stream type
+            const streamInfo = document.createElement('div');
+            streamInfo.className = 'stream-info';
+            streamInfo.textContent = `Loading ${isM3U8 ? 'HLS' : 'TS'} stream...`;
+            document.getElementById("sidebar").appendChild(streamInfo);
+
+            // Test proxy availability first
+            const workingProxy = await testProxyAvailability(url);
+            if (workingProxy === -1) {
+                console.warn("No working proxies found, trying direct approach");
+            } else {
+                currentProxyIndex = workingProxy;
+                console.log(`Using proxy ${currentProxyIndex + 1}`);
+            }
+
+            // Approach 1: Try native video element first (works better for some servers)
+            try {
+                console.log("Approach 1: Native video element");
+                const directUrl = workingProxy >= 0 ? getProxiedUrl(url, workingProxy) : url;
                 
-                if (hlsInstance) {
-                  hlsInstance.destroy();
-                  hlsInstance = null;
+                video.src = directUrl;
+                video.load();
+                
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    await playPromise;
                 }
                 
-                tryProxyHLS(url, video);
-              }
+                console.log("Native playback successful!");
+                streamInfo.textContent = "Playing via native player...";
+                return;
+            } catch (e) {
+                console.warn("Native playback failed:", e.message);
+            }
+
+            // Approach 2: Try HLS.js for m3u8 streams
+            if (isM3U8 && Hls.isSupported()) {
+                try {
+                    console.log("Approach 2: HLS.js");
+                    streamInfo.textContent = "Trying HLS.js player...";
+                    
+                    const hlsUrl = workingProxy >= 0 ? getProxiedUrl(url, workingProxy) : url;
+                    
+                    hlsInstance = new Hls({
+                        liveDurationInfinity: true,
+                        enableWorker: true,
+                        lowLatencyMode: true,
+                        backBufferLength: 90
+                    });
+                    
+                    hlsInstance.loadSource(hlsUrl);
+                    hlsInstance.attachMedia(video);
+                    
+                    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                        video.play().catch(() => {});
+                    });
+                    
+                    hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+                        console.warn("HLS error:", data);
+                        if (data.fatal) {
+                            switch (data.type) {
+                                case Hls.ErrorTypes.NETWORK_ERROR:
+                                    streamInfo.textContent = "Network error - trying alternative method...";
+                                    break;
+                                case Hls.ErrorTypes.MEDIA_ERROR:
+                                    streamInfo.textContent = "Media error - stream may be corrupted";
+                                    break;
+                                default:
+                                    streamInfo.textContent = "Fatal HLS error";
+                                    break;
+                            }
+                        }
+                    });
+                    
+                    return;
+                } catch (e) {
+                    console.warn("HLS.js failed:", e.message);
+                }
+            }
+
+            // Approach 3: Try mpegts.js for TS streams
+            if (isTS && window.mpegts && mpegts.isSupported()) {
+                try {
+                    console.log("Approach 3: mpegts.js");
+                    streamInfo.textContent = "Trying mpegts.js player...";
+                    
+                    const tsUrl = workingProxy >= 0 ? getProxiedUrl(url, workingProxy) : url;
+                    
+                    tsPlayer = mpegts.createPlayer({
+                        type: "mpegts",
+                        url: tsUrl,
+                        isLive: true,
+                    }, {
+                        enableWorker: true,
+                        enableStashBuffer: false, // Disable buffer for live streams
+                        stashInitialSize: 128 * 1024,
+                        autoCleanupSourceBuffer: true
+                    });
+
+                    tsPlayer.attachMediaElement(video);
+                    tsPlayer.load();
+                    
+                    tsPlayer.on(mpegts.Events.ERROR, (type, details, info) => {
+                        console.warn("mpegts error:", type, details, info || "");
+                        if (type === mpegts.Events.ERROR) {
+                            streamInfo.textContent = "MPEG-TS playback error";
+                        }
+                    });
+
+                    video.play().catch(e => console.log("Play failed:", e));
+                    return;
+                } catch (e) {
+                    console.warn("mpegts.js failed:", e.message);
+                }
+            }
+
+            // All approaches failed
+            streamInfo.remove();
+            errorDiv.innerHTML = '<div class="error-message">Unable to load stream. This may be due to CORS restrictions, server protections, or the stream being offline. GitHub Pages has limited streaming capabilities.</div>';
+        }
+
+        // Playlist loading functions
+        async function fetchPlaylistText() {
+            const candidates = ["lista.m3u8", "lista.m3u"];
+            for (const filename of candidates) {
+                try {
+                    const res = await fetch(filename);
+                    if (res.ok) {
+                        console.log("Loaded playlist:", filename);
+                        return await res.text();
+                    }
+                } catch (e) { /* try next */ }
+            }
+            throw new Error("No playlist file found");
+        }
+
+        function parseExtInf(line) {
+            const comma = line.lastIndexOf(",");
+            const name = comma !== -1 ? line.substring(comma + 1).trim() : "Unnamed channel";
+            const logoMatch = line.match(/tvg-logo="([^"]*)"/i);
+            const logo = logoMatch ? logoMatch[1] : "";
+            const groupMatch = line.match(/group-title="([^"]*)"/i);
+            const group = groupMatch ? groupMatch[1] : "";
+            return { name, logo, group };
+        }
+
+        async function loadChannelList() {
+            try {
+                const text = await fetchPlaylistText();
+                const lines = text.split(/\r?\n/);
+                const channels = [];
+                let currentMeta = { name: "", logo: "", group: "" };
+
+                for (let line of lines) {
+                    line = line.trim();
+                    if (!line) continue;
+
+                    if (line.startsWith("#EXTINF")) {
+                        currentMeta = parseExtInf(line);
+                    } else if (line.startsWith("http://") || line.startsWith("https://")) {
+                        channels.push({
+                            name: currentMeta.name,
+                            logo: currentMeta.logo,
+                            group: currentMeta.group,
+                            url: line,
+                        });
+                    }
+                }
+
+                allChannels = channels;
+                renderChannelList(allChannels);
+                if (channels.length > 0) playStream(channels[0].url);
+            } catch (e) {
+                console.error("Error loading playlist:", e);
+                document.getElementById("channels").innerHTML = '<div class="error-message">Error loading playlist file.</div>';
+            }
+        }
+
+        function renderChannelList(channels) {
+            const div = document.getElementById("channels");
+            div.innerHTML = "";
+
+            if (channels.length === 0) {
+                div.innerHTML = '<div class="error-message">No channels found.</div>';
+                return;
+            }
+
+            channels.forEach(ch => {
+                const item = document.createElement("div");
+                item.className = "channel";
+                item.onclick = () => playStream(ch.url);
+
+                if (ch.logo) {
+                    const img = document.createElement("img");
+                    img.src = ch.logo;
+                    img.alt = ch.name;
+                    img.onerror = () => { img.style.display = 'none'; };
+                    item.appendChild(img);
+                }
+
+                const textWrap = document.createElement("div");
+                textWrap.className = "channel-text";
+
+                const nameEl = document.createElement("div");
+                nameEl.className = "channel-name";
+                nameEl.textContent = ch.name || ch.url;
+                textWrap.appendChild(nameEl);
+
+                if (ch.group) {
+                    const groupEl = document.createElement("div");
+                    groupEl.className = "channel-group";
+                    groupEl.textContent = ch.group;
+                    textWrap.appendChild(groupEl);
+                }
+
+                item.appendChild(textWrap);
+                div.appendChild(item);
             });
-
-            return;
-          } catch (e) {
-            console.error("Direct HLS failed:", e);
-          }
         }
 
-        // Fallback for other formats
-        try {
-          const proxiedUrl = getProxiedUrl(url);
-          console.log("Playing fallback via proxy:", proxiedUrl);
-          video.src = proxiedUrl;
-          video.play().catch(() => {});
-        } catch (e) {
-          console.error("All playback methods failed:", e);
-          errorDiv.innerHTML = '<div class="error-message">Unable to load stream. This may be due to CORS restrictions or the stream being offline.</div>';
-        }
-      }
-
-      async function tryProxyHLS(url, video) {
-        try {
-          const playlistText = await fetchWithProxies(url);
-          console.log("Fetched HLS playlist via proxy");
-          
-          // Simple approach: just try to play the playlist directly via proxy
-          // without rewriting - this often works better
-          const proxiedUrl = getProxiedUrl(url);
-          
-          hlsInstance = new Hls({
-            liveDurationInfinity: true,
-            enableWorker: true,
-          });
-          
-          hlsInstance.loadSource(proxiedUrl);
-          hlsInstance.attachMedia(video);
-          
-          hlsInstance.on(Hls.Events.MEDIA_ATTACHED, () => {
-            video.play().catch(() => {});
-          });
-          
-        } catch (e) {
-          console.error("Proxy HLS also failed:", e);
-          document.getElementById("channels").innerHTML = 
-            '<div class="error-message">Unable to load HLS stream. The server may not support CORS for GitHub Pages.</div>';
-        }
-      }
-
-      // Playlist loading functions...
-      async function fetchPlaylistText() {
-        const candidates = ["lista.m3u8", "lista.m3u"];
-        for (const filename of candidates) {
-          try {
-            const res = await fetch(filename);
-            if (res.ok) {
-              console.log("Loaded playlist:", filename);
-              return await res.text();
-            }
-          } catch (e) { /* try next */ }
-        }
-        throw new Error("No playlist file found");
-      }
-
-      function parseExtInf(line) {
-        const comma = line.lastIndexOf(",");
-        const name = comma !== -1 ? line.substring(comma + 1).trim() : "Unnamed channel";
-        const logoMatch = line.match(/tvg-logo="([^"]*)"/i);
-        const logo = logoMatch ? logoMatch[1] : "";
-        const groupMatch = line.match(/group-title="([^"]*)"/i);
-        const group = groupMatch ? groupMatch[1] : "";
-        return { name, logo, group };
-      }
-
-      async function loadChannelList() {
-        try {
-          const text = await fetchPlaylistText();
-          const lines = text.split(/\r?\n/);
-          const channels = [];
-          let currentMeta = { name: "", logo: "", group: "" };
-
-          for (let line of lines) {
-            line = line.trim();
-            if (!line) continue;
-
-            if (line.startsWith("#EXTINF")) {
-              currentMeta = parseExtInf(line);
-            } else if (line.startsWith("http://") || line.startsWith("https://")) {
-              channels.push({
-                name: currentMeta.name,
-                logo: currentMeta.logo,
-                group: currentMeta.group,
-                url: line,
-              });
-            }
-          }
-
-          // Sort TS streams first (they usually work better on GitHub Pages)
-          channels.sort((a, b) => {
-            const aIsTS = a.url.toLowerCase().endsWith('.ts');
-            const bIsTS = b.url.toLowerCase().endsWith('.ts');
-            if (aIsTS && !bIsTS) return -1;
-            if (!aIsTS && bIsTS) return 1;
-            return 0;
-          });
-
-          allChannels = channels;
-          renderChannelList(allChannels);
-          if (channels.length > 0) playStream(channels[0].url);
-        } catch (e) {
-          console.error("Error loading playlist:", e);
-          document.getElementById("channels").innerHTML = 
-            '<div class="error-message">Error loading playlist file.</div>';
-        }
-      }
-
-      function renderChannelList(channels) {
-        const div = document.getElementById("channels");
-        div.innerHTML = "";
-
-        if (channels.length === 0) {
-          div.innerHTML = '<div class="error-message">No channels found.</div>';
-          return;
+        function setupSearch() {
+            const input = document.getElementById("search");
+            input.addEventListener("input", () => {
+                const q = input.value.toLowerCase().trim();
+                const filtered = q 
+                    ? allChannels.filter(ch => {
+                        const name = (ch.name || "").toLowerCase();
+                        const group = (ch.group || "").toLowerCase();
+                        return name.includes(q) || group.includes(q);
+                      })
+                    : allChannels;
+                renderChannelList(filtered);
+            });
         }
 
-        channels.forEach(ch => {
-          const item = document.createElement("div");
-          item.className = "channel";
-          item.onclick = () => playStream(ch.url);
+        function setupSidebarToggle() {
+            const btn = document.getElementById("toggleSidebar");
+            btn.addEventListener("click", () => {
+                const collapsed = document.body.classList.toggle("sidebar-collapsed");
+                btn.textContent = collapsed ? "Show channels" : "Hide channels";
+            });
+        }
 
-          if (ch.logo) {
-            const img = document.createElement("img");
-            img.src = ch.logo;
-            img.alt = ch.name;
-            img.onerror = () => { img.style.display = "none"; };
-            item.appendChild(img);
-          }
-
-          const textWrap = document.createElement("div");
-          textWrap.className = "channel-text";
-
-          const nameEl = document.createElement("div");
-          nameEl.className = "channel-name";
-          nameEl.textContent = ch.name || ch.url;
-          textWrap.appendChild(nameEl);
-
-          if (ch.group) {
-            const groupEl = document.createElement("div");
-            groupEl.className = "channel-group";
-            groupEl.textContent = ch.group;
-            textWrap.appendChild(groupEl);
-          }
-
-          item.appendChild(textWrap);
-          div.appendChild(item);
-        });
-      }
-
-      function setupSearch() {
-        const input = document.getElementById("search");
-        input.addEventListener("input", () => {
-          const q = input.value.toLowerCase().trim();
-          const filtered = q 
-            ? allChannels.filter(ch => {
-                const name = (ch.name || "").toLowerCase();
-                const group = (ch.group || "").toLowerCase();
-                return name.includes(q) || group.includes(q);
-              })
-            : allChannels;
-          renderChannelList(filtered);
-        });
-      }
-
-      function setupSidebarToggle() {
-        const btn = document.getElementById("toggleSidebar");
-        btn.addEventListener("click", () => {
-          const collapsed = document.body.classList.toggle("sidebar-collapsed");
-          btn.textContent = collapsed ? "Show channels" : "Hide channels";
-        });
-      }
-
-      // Init
-      setupSearch();
-      setupSidebarToggle();
-      loadChannelList();
+        // Init
+        setupSearch();
+        setupSidebarToggle();
+        loadChannelList();
     </script>
-  </body>
+</body>
 </html>
