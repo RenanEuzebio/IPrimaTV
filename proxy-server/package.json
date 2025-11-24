@@ -1,0 +1,39 @@
+{
+  "name": "iprimatv-proxy-server",
+  "version": "1.0.0",
+  "description": "Anonymous reverse proxy for IPrimaTV with CORS support and streaming capabilities",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "docker:build": "docker build -t iprimatv-proxy .",
+    "docker:run": "docker-compose up -d"
+  },
+  "keywords": [
+    "proxy",
+    "cors",
+    "streaming",
+    "hls",
+    "iptv"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.2",
+    "helmet": "^7.1.0",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^7.1.5",
+    "morgan": "^1.10.0",
+    "dotenv": "^16.3.1",
+    "socks-proxy-agent": "^8.0.2",
+    "https-proxy-agent": "^7.0.2",
+    "rotating-proxy": "^1.1.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
