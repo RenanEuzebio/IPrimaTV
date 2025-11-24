@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment variables
+.env*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+
+# OS
+Thumbs.db
+
+# PM2
+.pm2/
+
+# etc
+.mcp.json
+.claude/settings.local.json
+draft/
