@@ -128,50 +128,30 @@
     </div>
 
     <script>
-        // More reliable CORS proxies for streaming
-        const CORS_PROXIES = [
-            "https://api.codetabs.com/v1/proxy?quest=",
-            "https://cors.isomorphic-git.org/",
-            "https://thingproxy.freeboard.io/fetch/"
-        ];
+        // Self-hosted proxy configuration
+        // IMPORTANT: Replace with your actual proxy server URL after deployment
+        // Examples:
+        //   - Local testing: "http://localhost:3000/proxy?url="
+        //   - Production: "https://your-domain.com/proxy?url="
+        const PROXY_URL = "http://localhost:3000/proxy?url=";
 
-        function getProxiedUrl(url, proxyIndex = 0) {
-            if (proxyIndex >= CORS_PROXIES.length) return url;
-            const proxy = CORS_PROXIES[proxyIndex];
-            // Handle different proxy formats
-            if (proxy.includes("codetabs.com")) {
-                return proxy + encodeURIComponent(url);
+        // Optional: Set API key if your proxy server requires authentication
+        // Leave empty if API_KEY is not configured on the server
+        const API_KEY = "";  // e.g., "your-secret-api-key-here"
+
+        // Toggle to enable/disable proxy (set to false to try direct connections)
+        const USE_PROXY = true;
+
+        function getProxiedUrl(url) {
+            if (!USE_PROXY) {
+                return url;
             }
-            return proxy + url;
+            return PROXY_URL + encodeURIComponent(url);
         }
 
         let hlsInstance = null;
         let tsPlayer = null;
         let allChannels = [];
-        let currentProxyIndex = 0;
-
-        async function testProxyAvailability(url) {
-            console.log("Testing proxy availability for:", url);
-            for (let i = 0; i < CORS_PROXIES.length; i++) {
-                try {
-                    const testUrl = getProxiedUrl(url, i);
-                    console.log(`Testing proxy ${i + 1}:`, testUrl);
-                    
-                    const response = await fetch(testUrl, {
-                        method: 'HEAD',
-                        mode: 'cors'
-                    });
-                    
-                    if (response.ok || response.status === 200) {
-                        console.log(`Proxy ${i + 1} works!`);
-                        return i;
-                    }
-                } catch (e) {
-                    console.warn(`Proxy ${i + 1} failed:`, e.message);
-                }
-            }
-            return -1;
-        }
 
         async function playStream(url) {
             const video = document.getElementById("video");
@@ -203,22 +183,17 @@
             // Try different approaches based on stream type
             const streamInfo = document.createElement('div');
             streamInfo.className = 'stream-info';
-            streamInfo.textContent = `Loading ${isM3U8 ? 'HLS' : 'TS'} stream...`;
+            streamInfo.textContent = `Loading ${isM3U8 ? 'HLS' : 'TS'} stream${USE_PROXY ? ' via proxy' : ''}...`;
             document.getElementById("sidebar").appendChild(streamInfo);
 
-            // Test proxy availability first
-            const workingProxy = await testProxyAvailability(url);
-            if (workingProxy === -1) {
-                console.warn("No working proxies found, trying direct approach");
-            } else {
-                currentProxyIndex = workingProxy;
-                console.log(`Using proxy ${currentProxyIndex + 1}`);
-            }
+            // Get proxied or direct URL
+            const proxiedUrl = getProxiedUrl(url);
+            console.log(`Stream URL: ${USE_PROXY ? 'Using proxy' : 'Direct connection'}`);
 
             // Approach 1: Try native video element first (works better for some servers)
             try {
                 console.log("Approach 1: Native video element");
-                const directUrl = workingProxy >= 0 ? getProxiedUrl(url, workingProxy) : url;
+                const directUrl = proxiedUrl;
                 
                 video.src = directUrl;
                 video.load();
@@ -240,8 +215,8 @@
                 try {
                     console.log("Approach 2: HLS.js");
                     streamInfo.textContent = "Trying HLS.js player...";
-                    
-                    const hlsUrl = workingProxy >= 0 ? getProxiedUrl(url, workingProxy) : url;
+
+                    const hlsUrl = proxiedUrl;
                     
                     hlsInstance = new Hls({
                         liveDurationInfinity: true,
@@ -285,8 +260,8 @@
                 try {
                     console.log("Approach 3: mpegts.js");
                     streamInfo.textContent = "Trying mpegts.js player...";
-                    
-                    const tsUrl = workingProxy >= 0 ? getProxiedUrl(url, workingProxy) : url;
+
+                    const tsUrl = proxiedUrl;
                     
                     tsPlayer = mpegts.createPlayer({
                         type: "mpegts",
