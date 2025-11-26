@@ -29,3 +29,19 @@ $RECYCLE.BIN/
 *.log
 *.tmp
 .cache/
+
+# Playlist source files (use converter tool to update)
+lista.m3u8
+lista.m3u
+*.m3u8
+*.m3u
+
+# Converter tools (temporary)
+tools/convertPlaylist.js
+
+# Generated playlists should be tracked (keep playlist.js in repo)
+!js/data/playlist.js
+
+# compacted
+*.rar
+*.zip

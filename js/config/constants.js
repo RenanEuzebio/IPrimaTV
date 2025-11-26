@@ -9,5 +9,18 @@ export const CORS_PROXIES = [
     "https://thingproxy.freeboard.io/fetch/"
 ];
 
-// Playlist file candidates to try loading
-export const PLAYLIST_FILES = ["lista.m3u8", "lista.m3u"];
+// ============================================================================
+// PLAYLIST CONFIGURATION
+// ============================================================================
+// Playlist is now embedded as a JavaScript module in js/data/playlist.js
+// This change resolves fetch() failures in Android APK environments.
+//
+// To update the playlist:
+// 1. Click the "Convert Playlist" button in the app
+// 2. Upload or paste your M3U8 content
+// 3. Download the generated playlist.js file
+// 4. Replace js/data/playlist.js with the new version
+// 5. Reload the app to use the updated playlist
+//
+// See js/services/playlist.js for implementation details
+// ============================================================================

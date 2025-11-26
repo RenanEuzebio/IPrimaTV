@@ -5,6 +5,7 @@
 
 import { setupSearch, initChannelList } from './components/channelList.js';
 import { setupSidebarToggle } from './components/sidebar.js';
+import { setupPlaylistConverter } from './components/playlistConverter.js';
 import { loadChannelList } from './services/playlist.js';
 import { playStream } from './services/player.js';
 
@@ -16,6 +17,7 @@ async function init() {
         // Setup UI components
         setupSearch();
         setupSidebarToggle();
+        setupPlaylistConverter();
 
         // Load and display channels
         const channels = await loadChannelList();

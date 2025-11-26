@@ -21,7 +21,63 @@
         </div>
         <div id="player">
             <button id="toggleSidebar">Hide channels</button>
+            <button id="converterBtn" class="converter-btn" title="Convert M3U8 to JavaScript">Convert Playlist</button>
             <video id="video" controls preload="none"></video>
+        </div>
+    </div>
+
+    <!-- Playlist Converter Modal -->
+    <div id="converterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>M3U8 to JavaScript Converter</h2>
+                <button id="closeConverterBtn" class="close-btn" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="converter-section">
+                    <h3>Step 1: Input M3U8 Content</h3>
+                    <div class="input-options">
+                        <label class="file-label">
+                            <input type="file" id="m3uFileInput" accept=".m3u,.m3u8" aria-label="Select M3U8 file" />
+                            <span class="file-label-text">Select M3U8 File</span>
+                        </label>
+                        <div class="divider">or</div>
+                        <textarea
+                            id="m3uTextInput"
+                            placeholder="Paste M3U8 content here..."
+                            rows="12"
+                            spellcheck="false"
+                            aria-label="M3U8 content"></textarea>
+                        <div class="input-stats">
+                            <span>Characters: <strong id="charCount">0</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="converter-section">
+                    <h3>Step 2: Generated JavaScript Module</h3>
+                    <div class="output-container">
+                        <pre><code id="outputCode">// Paste M3U8 content above or select a file</code></pre>
+                    </div>
+                    <div class="output-stats">
+                        <span>Channels: <strong id="channelCount">0</strong></span>
+                        <button id="downloadPlaylistBtn" class="download-btn" disabled>
+                            Download playlist.js
+                        </button>
+                    </div>
+                </div>
+
+                <div class="converter-help">
+                    <h4>How to use:</h4>
+                    <ol>
+                        <li>Select an M3U8 file or paste the content directly</li>
+                        <li>The JavaScript module will generate automatically</li>
+                        <li>Click "Download playlist.js"</li>
+                        <li>Replace the existing js/data/playlist.js with your downloaded file</li>
+                        <li>Reload the app to use the new playlist</li>
+                    </ol>
+                </div>
+            </div>
         </div>
     </div>
 
