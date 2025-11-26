@@ -3,12 +3,29 @@
  * Manages video playback using HLS.js, mpegts.js, and native video element
  */
 
-import { getProxiedUrl, testProxyAvailability } from './proxy.js';
-import { showStreamInfo, updateStreamInfo } from '../components/streamInfo.js';
-
 // Player instances (module-level state)
 let hlsInstance = null;
 let tsPlayer = null;
+
+/**
+ * Show stream info message via Alpine app
+ * @param {string} message - Message to display
+ */
+function showStreamInfo(message) {
+    if (window.alpineApp) {
+        window.alpineApp.setStreamStatus(message);
+    } else {
+        console.log('[Stream]', message);
+    }
+}
+
+/**
+ * Update stream info message via Alpine app
+ * @param {string} message - Message to display
+ */
+function updateStreamInfo(message) {
+    showStreamInfo(message);
+}
 
 /**
  * Play a stream URL using the appropriate player
@@ -16,7 +33,6 @@ let tsPlayer = null;
  */
 export async function playStream(url) {
     const video = document.getElementById("video");
-    const errorDiv = document.getElementById("channels");
 
     if (!video) {
         console.error("Video element not found");
@@ -35,18 +51,9 @@ export async function playStream(url) {
     // Show loading message
     showStreamInfo(`Loading ${isM3U8 ? 'HLS' : 'TS'} stream...`);
 
-    // Test proxy availability first
-    const workingProxy = await testProxyAvailability(url);
-    if (workingProxy === -1) {
-        console.warn("No working proxies found, trying direct approach");
-    } else {
-        console.log(`Using proxy ${workingProxy + 1}`);
-    }
-
     // Approach 1: Try native video element first (works better for some servers)
     try {
         console.log("Approach 1: Native video element");
-        const directUrl = workingProxy >= 0 ? getProxiedUrl(url, workingProxy) : url;
 
         video.src = directUrl;
         video.load();
@@ -69,7 +76,7 @@ export async function playStream(url) {
             console.log("Approach 2: HLS.js");
             updateStreamInfo("Trying HLS.js player...");
 
-            const hlsUrl = workingProxy >= 0 ? getProxiedUrl(url, workingProxy) : url;
+            const hlsUrl = url;
 
             hlsInstance = new Hls({
                 liveDurationInfinity: true,
@@ -114,7 +121,7 @@ export async function playStream(url) {
             console.log("Approach 3: mpegts.js");
             updateStreamInfo("Trying mpegts.js player...");
 
-            const tsUrl = workingProxy >= 0 ? getProxiedUrl(url, workingProxy) : url;
+            const tsUrl = url;
 
             tsPlayer = mpegts.createPlayer({
                 type: "mpegts",
@@ -145,9 +152,7 @@ export async function playStream(url) {
     }
 
     // All approaches failed
-    if (errorDiv) {
-        errorDiv.innerHTML = '<div class="error-message">Unable to load stream. This may be due to CORS restrictions, server protections, or the stream being offline. GitHub Pages has limited streaming capabilities.</div>';
-    }
+    updateStreamInfo("Unable to load stream. This may be due to CORS restrictions or the stream being offline.");
 }
 
 /**
